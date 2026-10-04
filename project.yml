@@ -1,0 +1,31 @@
+name: Packmate
+options:
+  bundleIdPrefix: com.packmate
+  deploymentTarget:
+    iOS: "16.0"
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+
+targets:
+  Packmate:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: Packmate
+    settings:
+      base:
+        PRODUCT_NAME: Packmate
+        PRODUCT_BUNDLE_IDENTIFIER: com.packmate.Packmate
+        GENERATE_INFOPLIST_FILE: YES
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: "1.0.0"
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Packmate
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        ENABLE_PREVIEWS: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
