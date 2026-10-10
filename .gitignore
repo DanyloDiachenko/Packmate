@@ -15,3 +15,7 @@ build/
 # Swift Package Manager
 .build/
 .swiftpm/
+
+# IDE / Editor
+.vscode/
+

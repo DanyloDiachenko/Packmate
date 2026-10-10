@@ -20,7 +20,7 @@ targets:
       base:
         PRODUCT_NAME: ReadyRoam
         PRODUCT_BUNDLE_IDENTIFIER: com.readyroam.ReadyRoam
-        DEVELOPMENT_TEAM: F29H95HAC3
+        DEVELOPMENT_TEAM: ""
         CODE_SIGN_STYLE: Automatic
         GENERATE_INFOPLIST_FILE: YES
         CURRENT_PROJECT_VERSION: 1
