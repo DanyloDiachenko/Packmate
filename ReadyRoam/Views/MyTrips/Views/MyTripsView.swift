@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct MyTripsView: View {
+    @EnvironmentObject private var authService: AuthService
     @StateObject private var viewModel: MyTripsViewModel
 
     @Binding var isViewingTripDetails: Bool
@@ -26,7 +27,8 @@ struct MyTripsView: View {
         self._createdTrip = createdTrip
         self.onOpenSettings = onOpenSettings
         self.onPlanTrip = onPlanTrip
-        self._viewModel = StateObject(wrappedValue: viewModel ?? MyTripsViewModel())
+        let container = AppContainer.shared
+        self._viewModel = StateObject(wrappedValue: viewModel ?? MyTripsViewModel(tripService: container.tripService, tripItemService: container.tripItemService))
     }
 
     var body: some View {
@@ -221,7 +223,8 @@ struct MyTripsView: View {
                         .frame(width: 38, height: 38)
                         .shadow(color: Color(hex: "A855F7").opacity(0.4), radius: 8, x: 0, y: 3)
 
-                    Text(AuthService.shared.currentUser?.initial ?? "A")
+                    Text(authService.currentUser?.initial ?? "A")
+
                         .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.white)
                 }

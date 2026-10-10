@@ -2,12 +2,10 @@ import Foundation
 
 @MainActor
 final class TripService: TripServiceProtocol, ObservableObject {
-    static let shared = TripService()
-
     private let networkClient: NetworkClientProtocol
 
-    init(networkClient: NetworkClientProtocol? = nil) {
-        self.networkClient = networkClient ?? URLSessionNetworkClient(tokenProvider: AuthService.shared)
+    init(networkClient: NetworkClientProtocol) {
+        self.networkClient = networkClient
     }
 
     func fetchTrips(limit: Int = 4, offset: Int = 0, isArchived: Bool? = nil) async throws -> PaginatedTripsResponseDto {

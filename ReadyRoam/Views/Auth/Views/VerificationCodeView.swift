@@ -51,6 +51,7 @@ struct VerificationCodeView: View {
         _viewModel = StateObject(wrappedValue: VerificationCodeViewModel(
             email: email,
             purpose: purpose,
+            authService: AppContainer.shared.authService,
             onVerified: onVerified,
             onBack: onBack
         ))

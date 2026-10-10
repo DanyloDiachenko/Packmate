@@ -2,12 +2,10 @@ import Foundation
 
 @MainActor
 final class TripItemService: TripItemServiceProtocol, ObservableObject {
-    static let shared = TripItemService()
-
     private let networkClient: NetworkClientProtocol
 
-    init(networkClient: NetworkClientProtocol? = nil) {
-        self.networkClient = networkClient ?? URLSessionNetworkClient(tokenProvider: AuthService.shared)
+    init(networkClient: NetworkClientProtocol) {
+        self.networkClient = networkClient
     }
 
     func fetchTripItems(tripId: UUID) async throws -> [TripSectionGroupResponse] {

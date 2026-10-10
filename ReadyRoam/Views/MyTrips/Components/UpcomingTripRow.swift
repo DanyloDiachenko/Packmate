@@ -54,8 +54,6 @@ struct UpcomingTripRow: View {
         )
     }
 
-
-
     private func tagPill(icon: String, text: String) -> some View {
         HStack(spacing: 4) {
             Image(systemName: icon)

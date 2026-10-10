@@ -15,7 +15,8 @@ struct ArchivedTripsView: View {
     ) {
         self._isViewingTripDetails = isViewingTripDetails
         self.onOpenSettings = onOpenSettings
-        self._viewModel = StateObject(wrappedValue: viewModel ?? ArchivedTripsViewModel())
+        let container = AppContainer.shared
+        self._viewModel = StateObject(wrappedValue: viewModel ?? ArchivedTripsViewModel(tripService: container.tripService))
     }
 
     var body: some View {

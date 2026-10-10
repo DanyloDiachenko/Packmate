@@ -26,7 +26,7 @@ final class VerificationCodeViewModel: ObservableObject {
     init(
         email: String,
         purpose: VerificationPurpose,
-        authService: AuthServiceProtocol = AuthService.shared,
+        authService: AuthServiceProtocol,
         onVerified: (() -> Void)? = nil,
         onBack: (() -> Void)? = nil
     ) {

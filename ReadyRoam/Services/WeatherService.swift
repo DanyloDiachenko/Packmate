@@ -54,12 +54,10 @@ public typealias WeatherResponse = WeatherResponseDto
 
 @MainActor
 final class WeatherService: WeatherServiceProtocol, ObservableObject {
-    static let shared = WeatherService()
-
     private let networkClient: NetworkClientProtocol
 
-    init(networkClient: NetworkClientProtocol? = nil) {
-        self.networkClient = networkClient ?? URLSessionNetworkClient(tokenProvider: AuthService.shared)
+    init(networkClient: NetworkClientProtocol) {
+        self.networkClient = networkClient
     }
 
     func fetchLiveWeather(city: String, country: String) async throws -> WeatherResponse {

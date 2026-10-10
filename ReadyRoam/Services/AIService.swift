@@ -26,12 +26,10 @@ struct AIRecommendationResponse: Decodable {
 
 @MainActor
 final class AIService: AIServiceProtocol, ObservableObject {
-    static let shared = AIService()
-
     private let networkClient: NetworkClientProtocol
 
-    init(networkClient: NetworkClientProtocol? = nil) {
-        self.networkClient = networkClient ?? URLSessionNetworkClient(tokenProvider: AuthService.shared)
+    init(networkClient: NetworkClientProtocol) {
+        self.networkClient = networkClient
     }
 
     func fetchPackingSuggestions(cityName: String, country: String, season: String, temperature: String, tripDays: Int, tripType: String, existingItems: [String]) async throws -> [AISuggestion] {

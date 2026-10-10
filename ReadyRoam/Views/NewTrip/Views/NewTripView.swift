@@ -17,9 +17,13 @@ struct NewTripView: View {
         onCancel: (() -> Void)? = nil,
         viewModel: NewTripViewModel? = nil
     ) {
-        self.onTripCreated = onTripCreated
-        self.onCancel = onCancel
-        self._viewModel = StateObject(wrappedValue: viewModel ?? NewTripViewModel(existingTrips: existingTrips))
+        let container = AppContainer.shared
+        self._viewModel = StateObject(wrappedValue: viewModel ?? NewTripViewModel(
+            existingTrips: existingTrips,
+            tripService: container.tripService,
+            tripItemService: container.tripItemService,
+            destinationService: container.destinationService
+        ))
     }
 
     var body: some View {

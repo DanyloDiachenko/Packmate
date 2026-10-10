@@ -5,7 +5,7 @@ struct AuthView: View {
     @Namespace private var tabAnimation
 
     init(onAuthenticated: (() -> Void)? = nil) {
-        _viewModel = StateObject(wrappedValue: AuthViewModel(onAuthenticated: onAuthenticated))
+        _viewModel = StateObject(wrappedValue: AuthViewModel(authService: AppContainer.shared.authService, onAuthenticated: onAuthenticated))
     }
 
     var body: some View {

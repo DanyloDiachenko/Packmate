@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @ObservedObject private var authService = AuthService.shared
+    @EnvironmentObject private var authService: AuthService
 
     var body: some View {
         Group {

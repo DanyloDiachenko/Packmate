@@ -6,6 +6,7 @@ final class AppContainer: ObservableObject {
     static let shared = AppContainer()
 
     let config: AppConfig
+    let tokenStorage: TokenStorageProtocol
     let networkClient: NetworkClientProtocol
     let authService: AuthService
     let tripService: TripService
@@ -16,13 +17,18 @@ final class AppContainer: ObservableObject {
 
     init(
         config: AppConfig = .shared,
+        tokenStorage: TokenStorageProtocol = KeychainStorage.shared,
         networkClient: NetworkClientProtocol? = nil
     ) {
         self.config = config
-        let auth = AuthService.shared
-        let client = networkClient ?? URLSessionNetworkClient(tokenProvider: auth, config: config)
+        self.tokenStorage = tokenStorage
+        
+        let client = networkClient ?? URLSessionNetworkClient(tokenProvider: tokenStorage, config: config)
         self.networkClient = client
+        
+        let auth = AuthService(config: config, networkClient: client, tokenStorage: tokenStorage)
         self.authService = auth
+        
         self.tripService = TripService(networkClient: client)
         self.tripItemService = TripItemService(networkClient: client)
         self.destinationService = DestinationService(networkClient: client)

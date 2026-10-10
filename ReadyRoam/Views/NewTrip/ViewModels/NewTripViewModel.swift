@@ -42,14 +42,14 @@ final class NewTripViewModel: ObservableObject {
 
     init(
         existingTrips: [Trip] = [],
-        tripService: (any TripServiceProtocol)? = nil,
-        tripItemService: (any TripItemServiceProtocol)? = nil,
-        destinationService: (any DestinationServiceProtocol)? = nil
+        tripService: any TripServiceProtocol,
+        tripItemService: any TripItemServiceProtocol,
+        destinationService: any DestinationServiceProtocol
     ) {
         self.existingTrips = existingTrips
-        self.tripService = tripService ?? TripService.shared
-        self.tripItemService = tripItemService ?? TripItemService.shared
-        self.destinationService = destinationService ?? DestinationService.shared
+        self.tripService = tripService
+        self.tripItemService = tripItemService
+        self.destinationService = destinationService
     }
 
     var allTrips: [Trip] {

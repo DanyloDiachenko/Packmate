@@ -17,9 +17,13 @@ struct TripDetailsView: View {
     ) {
         self._isViewingTripDetails = isViewingTripDetails
         self._isShowingAIDrawer = isShowingAIDrawer
+        let container = AppContainer.shared
         _viewModel = StateObject(wrappedValue: TripDetailsViewModel(
             trip: trip,
             isReadOnly: isReadOnly,
+            tripItemService: container.tripItemService,
+            tripService: container.tripService,
+            weatherService: container.weatherService,
             onTripDeleted: onTripDeleted,
             onBack: onBack
         ))
@@ -42,6 +46,7 @@ struct TripDetailsView: View {
     ) {
         self._isViewingTripDetails = isViewingTripDetails
         self._isShowingAIDrawer = isShowingAIDrawer
+        let container = AppContainer.shared
         _viewModel = StateObject(wrappedValue: TripDetailsViewModel(
             tripId: tripId,
             city: city,
@@ -52,6 +57,9 @@ struct TripDetailsView: View {
             weatherToday: weatherToday,
             currentSeason: currentSeason,
             isReadOnly: isReadOnly,
+            tripItemService: container.tripItemService,
+            tripService: container.tripService,
+            weatherService: container.weatherService,
             onTripDeleted: onTripDeleted,
             onBack: onBack
         ))

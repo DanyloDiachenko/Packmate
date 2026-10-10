@@ -143,4 +143,3 @@ struct Trip: Identifiable, Hashable {
     }
 }
 
-

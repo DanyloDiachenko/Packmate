@@ -45,7 +45,6 @@ public protocol NetworkClientProtocol: Sendable {
 
 @MainActor
 public final class URLSessionNetworkClient: NetworkClientProtocol, @unchecked Sendable {
-    public static let shared = URLSessionNetworkClient()
 
     private let session: URLSession
     private let tokenProvider: AccessTokenProvider?
@@ -160,24 +159,7 @@ public final class URLSessionNetworkClient: NetworkClientProtocol, @unchecked Se
     }
 
     private func parseServerErrorMessage(from data: Data) -> String? {
-        if let errorObj = try? JSONDecoder().decode(BackendErrorResponse.self, from: data),
-           let msg = errorObj.message, !msg.isEmpty {
-            return msg
-        }
-        if let problemObj = try? JSONDecoder().decode(ProblemDetailsResponse.self, from: data) {
-            if let errors = problemObj.errors, let first = errors.values.first, let msg = first.first {
-                return msg
-            }
-            if let detail = problemObj.detail, !detail.isEmpty {
-                return detail
-            }
-            if let title = problemObj.title, !title.isEmpty {
-                return title
-            }
-        }
-        if let raw = String(data: data, encoding: .utf8), !raw.isEmpty {
-            return raw
-        }
-        return nil
+        return ServerErrorParser.parseErrorMessage(from: data)
     }
+
 }

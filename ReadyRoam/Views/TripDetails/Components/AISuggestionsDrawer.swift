@@ -25,6 +25,7 @@ struct AISuggestionsDrawer: View {
             tripDays: tripDays,
             tripType: tripType,
             existingItems: existingItems,
+            aiService: AppContainer.shared.aiService,
             onAddItem: onAddItem,
             onRemoveItem: onRemoveItem
         ))

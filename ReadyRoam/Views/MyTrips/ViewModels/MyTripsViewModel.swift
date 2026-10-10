@@ -29,11 +29,11 @@ final class MyTripsViewModel: ObservableObject {
     }
 
     init(
-        tripService: (any TripServiceProtocol)? = nil,
-        tripItemService: (any TripItemServiceProtocol)? = nil
+        tripService: any TripServiceProtocol,
+        tripItemService: any TripItemServiceProtocol
     ) {
-        self.tripService = tripService ?? TripService.shared
-        self.tripItemService = tripItemService ?? TripItemService.shared
+        self.tripService = tripService
+        self.tripItemService = tripItemService
     }
 
     func loadInitialTrips() async {

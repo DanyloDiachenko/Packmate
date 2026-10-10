@@ -64,9 +64,9 @@ class TripDetailsViewModel: ObservableObject {
     convenience init(
         trip: Trip,
         isReadOnly: Bool = false,
-        tripItemService: (any TripItemServiceProtocol)? = nil,
-        tripService: (any TripServiceProtocol)? = nil,
-        weatherService: (any WeatherServiceProtocol)? = nil,
+        tripItemService: any TripItemServiceProtocol,
+        tripService: any TripServiceProtocol,
+        weatherService: any WeatherServiceProtocol,
         onTripDeleted: ((UUID) -> Void)? = nil,
         onBack: (() -> Void)? = nil
     ) {
@@ -102,9 +102,9 @@ class TripDetailsViewModel: ObservableObject {
         departDate: Date? = nil,
         returnDate: Date? = nil,
         isReadOnly: Bool = false,
-        tripItemService: (any TripItemServiceProtocol)? = nil,
-        tripService: (any TripServiceProtocol)? = nil,
-        weatherService: (any WeatherServiceProtocol)? = nil,
+        tripItemService: any TripItemServiceProtocol,
+        tripService: any TripServiceProtocol,
+        weatherService: any WeatherServiceProtocol,
         onTripDeleted: ((UUID) -> Void)? = nil,
         onBack: (() -> Void)? = nil
     ) {
@@ -119,9 +119,9 @@ class TripDetailsViewModel: ObservableObject {
         self.departDate = departDate
         self.returnDate = returnDate
         self.isReadOnly = isReadOnly
-        self.tripItemService = tripItemService ?? TripItemService.shared
-        self.tripService = tripService ?? TripService.shared
-        self.weatherService = weatherService ?? WeatherService.shared
+        self.tripItemService = tripItemService
+        self.tripService = tripService
+        self.weatherService = weatherService
         self.onTripDeleted = onTripDeleted
         self.onBack = onBack
 

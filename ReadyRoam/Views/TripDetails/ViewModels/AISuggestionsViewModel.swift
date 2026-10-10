@@ -28,7 +28,7 @@ final class AISuggestionsViewModel: ObservableObject {
         tripDays: Int = 0,
         tripType: String = "",
         existingItems: [String] = [],
-        aiService: (any AIServiceProtocol)? = nil,
+        aiService: any AIServiceProtocol,
         onAddItem: ((AISuggestion) -> Void)? = nil,
         onRemoveItem: ((AISuggestion) -> Void)? = nil
     ) {
@@ -39,7 +39,7 @@ final class AISuggestionsViewModel: ObservableObject {
         self.tripDays = tripDays
         self.tripType = tripType
         self.existingItems = existingItems
-        self.aiService = aiService ?? AIService.shared
+        self.aiService = aiService
         self.onAddItem = onAddItem
         self.onRemoveItem = onRemoveItem
     }

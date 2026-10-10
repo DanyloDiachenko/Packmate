@@ -27,7 +27,7 @@ final class AuthViewModel: ObservableObject {
     var onAuthenticated: (() -> Void)? = nil
     private let authService: AuthServiceProtocol
 
-    init(authService: AuthServiceProtocol = AuthService.shared, onAuthenticated: (() -> Void)? = nil) {
+    init(authService: AuthServiceProtocol, onAuthenticated: (() -> Void)? = nil) {
         self.authService = authService
         self.onAuthenticated = onAuthenticated
     }

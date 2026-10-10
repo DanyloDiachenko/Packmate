@@ -116,4 +116,3 @@ struct ChecklistCategory: Identifiable, Equatable {
     }
 }
 
-

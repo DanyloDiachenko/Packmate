@@ -4,7 +4,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     var onLogout: (() -> Void)? = nil
     var onBack: (() -> Void)? = nil
-    @ObservedObject private var authService = AuthService.shared
+    @EnvironmentObject private var authService: AuthService
 
     @State private var showingLogoutDialog = false
     @State private var showingEditProfile = false

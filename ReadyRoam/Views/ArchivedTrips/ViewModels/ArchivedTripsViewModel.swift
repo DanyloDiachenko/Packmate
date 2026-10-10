@@ -12,8 +12,8 @@ final class ArchivedTripsViewModel: ObservableObject {
 
     private let tripService: any TripServiceProtocol
 
-    init(tripService: (any TripServiceProtocol)? = nil) {
-        self.tripService = tripService ?? TripService.shared
+    init(tripService: any TripServiceProtocol) {
+        self.tripService = tripService
     }
 
     func loadArchivedTrips() async {

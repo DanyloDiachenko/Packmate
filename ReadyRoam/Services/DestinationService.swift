@@ -2,12 +2,10 @@ import Foundation
 
 @MainActor
 final class DestinationService: DestinationServiceProtocol, ObservableObject {
-    static let shared = DestinationService()
-
     private let networkClient: NetworkClientProtocol
 
-    init(networkClient: NetworkClientProtocol? = nil) {
-        self.networkClient = networkClient ?? URLSessionNetworkClient(tokenProvider: AuthService.shared)
+    init(networkClient: NetworkClientProtocol) {
+        self.networkClient = networkClient
     }
 
     func searchDestinations(query: String) async throws -> [DestinationDto] {

@@ -2,140 +2,8 @@ import Foundation
 import SwiftUI
 import Combine
 
-struct SignUpRequest: Codable {
-    let firstName: String
-    let lastName: String
-    let email: String
-    let password: String
-}
-
-struct UpdateProfileRequest: Codable {
-    let firstName: String
-    let lastName: String
-}
-
-struct SignInRequest: Codable {
-    let email: String
-    let password: String
-}
-
-struct AuthResponse: Codable {
-    let token: String?
-    let userId: String?
-    let email: String?
-}
-
-struct UserProfileResponse: Codable {
-    let userId: String
-    let firstName: String?
-    let lastName: String?
-    let email: String?
-    let createdAt: String?
-}
-
-struct ConfirmEmailRequest: Codable {
-    let email: String
-    let code: String
-}
-
-struct VerifyLoginRequest: Codable {
-    let email: String
-    let code: String
-}
-
-struct ForgotPasswordRequest: Codable {
-    let email: String
-}
-
-struct ResetPasswordRequest: Codable {
-    let email: String
-    let code: String
-    let newPassword: String
-}
-
-struct ResendCodeRequest: Codable {
-    let email: String
-    let purpose: String
-}
-
-struct SignUpSuccessResponse: Codable {
-    let message: String?
-    let email: String?
-}
-
-struct BackendErrorResponse: Codable {
-    let message: String?
-}
-
-struct ProblemDetailsResponse: Codable {
-    let title: String?
-    let detail: String?
-    let errors: [String: [String]]?
-}
-
-struct LoginTwoFactorResponse: Decodable {
-    let requiresTwoFactor: Bool?
-    let email: String?
-    let message: String?
-
-    enum CodingKeys: String, CodingKey {
-        case requiresTwoFactor, email, message
-        case requiresTwoFactorPascal = "RequiresTwoFactor"
-        case emailPascal = "Email"
-        case messagePascal = "Message"
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.requiresTwoFactor = (try? container.decodeIfPresent(Bool.self, forKey: .requiresTwoFactor))
-            ?? (try? container.decodeIfPresent(Bool.self, forKey: .requiresTwoFactorPascal))
-        self.email = (try? container.decodeIfPresent(String.self, forKey: .email))
-            ?? (try? container.decodeIfPresent(String.self, forKey: .emailPascal))
-        self.message = (try? container.decodeIfPresent(String.self, forKey: .message))
-            ?? (try? container.decodeIfPresent(String.self, forKey: .messagePascal))
-    }
-}
-
-enum SignInResult {
-    case requiresTwoFactor(email: String, message: String)
-    case emailNotConfirmed(email: String, message: String)
-    case authenticated(token: String)
-}
-
-struct UserProfile: Codable, Equatable {
-    let id: String
-    var firstName: String
-    var lastName: String
-    var email: String
-
-    var fullName: String {
-        let trimmedFirst = firstName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedLast = lastName.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedFirst.isEmpty && !trimmedLast.isEmpty {
-            return "\(trimmedFirst) \(trimmedLast)"
-        } else if !trimmedFirst.isEmpty {
-            return trimmedFirst
-        } else if !trimmedLast.isEmpty {
-            return trimmedLast
-        }
-        return email.components(separatedBy: "@").first ?? "Traveler"
-    }
-
-    var initial: String {
-        if let first = firstName.first {
-            return String(first).uppercased()
-        }
-        if let emailFirst = email.first {
-            return String(emailFirst).uppercased()
-        }
-        return "U"
-    }
-}
-
 @MainActor
 final class AuthService: AuthServiceProtocol, AccessTokenProvider, ObservableObject {
-    static let shared = AuthService()
-
     @Published public var baseURL: URL {
         didSet {
             config.setCustomBaseURL(baseURL)
@@ -147,25 +15,26 @@ final class AuthService: AuthServiceProtocol, AccessTokenProvider, ObservableObj
     @Published var isLoading: Bool = false
 
     public nonisolated var currentToken: String? {
-        UserDefaults.standard.string(forKey: "readyroam_auth_token") ?? UserDefaults.standard.string(forKey: "packmate_auth_token")
+        tokenStorage.getToken()
     }
 
-    private let tokenKey = "readyroam_auth_token"
     private let userKey = "readyroam_cached_user"
+    private let tokenStorage: TokenStorageProtocol
     private let networkClient: NetworkClientProtocol
     private let config: AppConfig
 
     init(
         config: AppConfig = .shared,
-        networkClient: NetworkClientProtocol? = nil
+        networkClient: NetworkClientProtocol? = nil,
+        tokenStorage: TokenStorageProtocol = KeychainStorage.shared
     ) {
         self.config = config
         self.baseURL = config.baseURL
+        self.tokenStorage = tokenStorage
         let client = networkClient ?? URLSessionNetworkClient(tokenProvider: nil, config: config)
         self.networkClient = client
 
-        let savedToken = UserDefaults.standard.string(forKey: tokenKey) ?? UserDefaults.standard.string(forKey: "packmate_auth_token")
-        if let savedToken = savedToken, !savedToken.isEmpty {
+        if let savedToken = tokenStorage.getToken(), !savedToken.isEmpty {
             self.token = savedToken
             self.isAuthenticated = true
 
@@ -210,13 +79,13 @@ final class AuthService: AuthServiceProtocol, AccessTokenProvider, ObservableObj
 
                 return .requiresTwoFactor(email: email, message: "A login verification code was sent to your email.")
             } else if response.statusCode == 400 {
-                let error = parseError(from: data, statusCode: 400)
+                let error = ServerErrorParser.parse(from: data, statusCode: 400)
                 if error.localizedDescription.contains("not confirmed") || error.localizedDescription.contains("verification code") {
                     return .emailNotConfirmed(email: email, message: error.localizedDescription)
                 }
                 throw error
             } else {
-                throw parseError(from: data, statusCode: response.statusCode)
+                throw ServerErrorParser.parse(from: data, statusCode: response.statusCode)
             }
         } catch let err as APIError {
             throw err
@@ -358,7 +227,7 @@ final class AuthService: AuthServiceProtocol, AccessTokenProvider, ObservableObj
         self.token = nil
         self.currentUser = nil
         self.isAuthenticated = false
-        UserDefaults.standard.removeObject(forKey: tokenKey)
+        tokenStorage.deleteToken()
         UserDefaults.standard.removeObject(forKey: userKey)
     }
 
@@ -387,42 +256,9 @@ final class AuthService: AuthServiceProtocol, AccessTokenProvider, ObservableObj
         self.token = token
         self.currentUser = user
         self.isAuthenticated = true
-        UserDefaults.standard.set(token, forKey: tokenKey)
+        tokenStorage.saveToken(token)
         if let encoded = try? JSONEncoder().encode(user) {
             UserDefaults.standard.set(encoded, forKey: userKey)
         }
-    }
-
-    private func parseError(from data: Data, statusCode: Int) -> APIError {
-        if let errorResponse = try? JSONDecoder().decode(BackendErrorResponse.self, from: data),
-           let msg = errorResponse.message, !msg.isEmpty {
-            return APIError.httpError(statusCode: statusCode, message: msg)
-        }
-
-        if let problem = try? JSONDecoder().decode(ProblemDetailsResponse.self, from: data) {
-            if let errors = problem.errors, let firstList = errors.values.first, let firstMsg = firstList.first {
-                return APIError.httpError(statusCode: statusCode, message: firstMsg)
-            }
-            if let detail = problem.detail, !detail.isEmpty {
-                return APIError.httpError(statusCode: statusCode, message: detail)
-            }
-            if let title = problem.title, !title.isEmpty {
-                return APIError.httpError(statusCode: statusCode, message: title)
-            }
-        }
-
-        if let rawText = String(data: data, encoding: .utf8), !rawText.isEmpty {
-            return APIError.httpError(statusCode: statusCode, message: rawText)
-        }
-
-        let fallbackMsg: String
-        switch statusCode {
-        case 400: fallbackMsg = "Invalid request details."
-        case 401: fallbackMsg = "Invalid email or password."
-        case 409: fallbackMsg = "An account with this email already exists."
-        case 500...599: fallbackMsg = "Server error. Please try again later."
-        default: fallbackMsg = "Request failed (status code: \(statusCode))."
-        }
-        return APIError.httpError(statusCode: statusCode, message: fallbackMsg)
     }
 }
