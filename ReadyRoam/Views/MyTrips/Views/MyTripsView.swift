@@ -2,31 +2,16 @@ import SwiftUI
 
 struct MyTripsView: View {
     @EnvironmentObject private var authService: AuthService
+    @EnvironmentObject private var router: AppRouter
     @StateObject private var viewModel: MyTripsViewModel
 
-    @Binding var isViewingTripDetails: Bool
-    @Binding var isShowingAIDrawer: Bool
-    @Binding var upcomingTrips: [Trip]
-    @Binding var createdTrip: Trip?
-
     var onOpenSettings: (() -> Void)? = nil
-    var onPlanTrip: (() -> Void)? = nil
 
     init(
-        isViewingTripDetails: Binding<Bool> = .constant(false),
-        isShowingAIDrawer: Binding<Bool> = .constant(false),
-        upcomingTrips: Binding<[Trip]> = .constant([]),
-        createdTrip: Binding<Trip?> = .constant(nil),
         onOpenSettings: (() -> Void)? = nil,
-        onPlanTrip: (() -> Void)? = nil,
         viewModel: MyTripsViewModel? = nil
     ) {
-        self._isViewingTripDetails = isViewingTripDetails
-        self._isShowingAIDrawer = isShowingAIDrawer
-        self._upcomingTrips = upcomingTrips
-        self._createdTrip = createdTrip
         self.onOpenSettings = onOpenSettings
-        self.onPlanTrip = onPlanTrip
         let container = AppContainer.shared
         self._viewModel = StateObject(wrappedValue: viewModel ?? MyTripsViewModel(tripService: container.tripService, tripItemService: container.tripItemService))
     }
@@ -50,7 +35,9 @@ struct MyTripsView: View {
                     } else if let error = viewModel.errorMessage, viewModel.trips.isEmpty {
                         errorView(error)
                     } else if viewModel.trips.isEmpty {
-                        EmptyTripsView(onPlanTrip: onPlanTrip)
+                        EmptyTripsView(onPlanTrip: {
+                            router.present(.newTrip)
+                        })
                     } else {
                         populatedTripsView
                     }
@@ -62,31 +49,42 @@ struct MyTripsView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .navigationDestination(for: Route.self) { route in
+            switch route {
+            case .tripDetails(let trip):
+                TripDetailsView(
+                    trip: trip,
+                    onTripDeleted: { deletedId in
+                        viewModel.removeTrip(id: deletedId)
+                        router.pop()
+                    }
+                )
+            case .archivedTripDetails(let trip):
+                TripDetailsView(
+                    trip: trip,
+                    isReadOnly: true,
+                    onTripDeleted: { _ in
+                        router.pop()
+                    }
+                )
+            }
+        }
         .task {
             await viewModel.loadInitialTrips()
         }
-        .onChange(of: createdTrip) { newTrip in
-            if let newTrip = newTrip {
-                viewModel.handleCreatedTrip(newTrip)
-                createdTrip = nil
+        .onReceive(NotificationCenter.default.publisher(for: .didCreateNewTrip)) { _ in
+            Task {
+                await viewModel.loadInitialTrips()
             }
-        }
-        .onReceive(viewModel.$trips) { trips in
-            upcomingTrips = Array(trips.dropFirst())
         }
     }
 
     @ViewBuilder
     private var populatedTripsView: some View {
         if let active = viewModel.activeTrip {
-            NavigationLink(destination: TripDetailsView(
-                isViewingTripDetails: $isViewingTripDetails,
-                isShowingAIDrawer: $isShowingAIDrawer,
-                trip: active,
-                onTripDeleted: { deletedId in
-                    viewModel.removeTrip(id: deletedId)
-                }
-            )) {
+            Button(action: {
+                router.open(active)
+            }) {
                 ActiveTripCard(trip: active)
             }
             .buttonStyle(.plain)
@@ -100,14 +98,9 @@ struct MyTripsView: View {
 
             VStack(spacing: 12) {
                 ForEach(viewModel.upcomingTrips) { trip in
-                    NavigationLink(destination: TripDetailsView(
-                        isViewingTripDetails: $isViewingTripDetails,
-                        isShowingAIDrawer: $isShowingAIDrawer,
-                        trip: trip,
-                        onTripDeleted: { deletedId in
-                            viewModel.removeTrip(id: deletedId)
-                        }
-                    )) {
+                    Button(action: {
+                        router.open(trip)
+                    }) {
                         UpcomingTripRow(trip: trip)
                     }
                     .buttonStyle(.plain)
@@ -224,7 +217,6 @@ struct MyTripsView: View {
                         .shadow(color: Color(hex: "A855F7").opacity(0.4), radius: 8, x: 0, y: 3)
 
                     Text(authService.currentUser?.initial ?? "A")
-
                         .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.white)
                 }
@@ -237,5 +229,6 @@ struct MyTripsView: View {
 struct MyTripsView_Previews: PreviewProvider {
     static var previews: some View {
         MainTabView()
+            .environmentObject(AppRouter())
     }
 }

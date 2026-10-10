@@ -45,8 +45,6 @@ class TripDetailsViewModel: ObservableObject {
     @Published var showingErrorAlert: Bool = false
     @Published var itemErrorMessage: String? = nil
 
-    let drawerHeight: CGFloat = UIScreen.main.bounds.height * 0.72
-    let addItemDrawerHeight: CGFloat = UIScreen.main.bounds.height * 0.68
     let drawerAnimation = Animation.spring(response: 0.38, dampingFraction: 0.82)
 
     var showingAIDrawer: Bool {

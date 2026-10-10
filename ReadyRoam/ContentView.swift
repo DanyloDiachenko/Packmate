@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject private var authService: AuthService
+    @StateObject private var router = AppRouter()
 
     var body: some View {
         Group {
@@ -12,12 +13,10 @@ struct ContentView: View {
                     }
                 })
             } else {
-                AuthView(onAuthenticated: {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                    }
-                })
+                AuthView(onAuthenticated: {})
             }
         }
+        .environmentObject(router)
     }
 }
 

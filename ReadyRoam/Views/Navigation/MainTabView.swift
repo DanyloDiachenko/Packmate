@@ -3,8 +3,7 @@ import SwiftUI
 enum AppTab: Int, CaseIterable, Identifiable {
     case myTrips = 0
     case archivedTrips = 1
-    case newTrip = 2
-    case settings = 3
+    case settings = 2
 
     var id: Int { rawValue }
 
@@ -12,7 +11,6 @@ enum AppTab: Int, CaseIterable, Identifiable {
         switch self {
         case .myTrips: return "My Trips"
         case .archivedTrips: return "Archive"
-        case .newTrip: return "New Trip"
         case .settings: return "Settings"
         }
     }
@@ -21,7 +19,6 @@ enum AppTab: Int, CaseIterable, Identifiable {
         switch self {
         case .myTrips: return "suitcase.fill"
         case .archivedTrips: return "archivebox.fill"
-        case .newTrip: return "plus.circle.fill"
         case .settings: return "gearshape"
         }
     }
@@ -30,79 +27,51 @@ enum AppTab: Int, CaseIterable, Identifiable {
 struct MainTabView: View {
     var onLogout: (() -> Void)? = nil
 
-    @State private var selectedTab: AppTab = .myTrips
-    @State private var isViewingTripDetails: Bool = false
-    @State private var isShowingAIDrawer: Bool = false
-    @State private var upcomingTrips: [Trip] = []
-    @State private var createdTrip: Trip? = nil
-
+    @EnvironmentObject private var router: AppRouter
     private let fabMargin: CGFloat = 11
 
     var body: some View {
         ZStack(alignment: .bottom) {
-
-            Group {
-                switch selectedTab {
-                case .myTrips:
-                    NavigationStack {
-                        MyTripsView(
-                            isViewingTripDetails: $isViewingTripDetails,
-                            isShowingAIDrawer: $isShowingAIDrawer,
-                            upcomingTrips: $upcomingTrips,
-                            createdTrip: $createdTrip,
-                            onOpenSettings: {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    selectedTab = .settings
-                                }
-                            },
-                            onPlanTrip: {
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                    selectedTab = .newTrip
-                                }
-                            }
-                        )
-                    }
-                case .archivedTrips:
-                    NavigationStack {
-                        ArchivedTripsView(
-                            isViewingTripDetails: $isViewingTripDetails,
-                            onOpenSettings: {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    selectedTab = .settings
-                                }
-                            }
-                        )
-                    }
-                case .newTrip:
-                    NewTripView(
-                        existingTrips: upcomingTrips,
-                        onTripCreated: { newTrip in
-                            createdTrip = newTrip
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                selectedTab = .myTrips
-                            }
-                        },
-                        onCancel: {
+            ZStack {
+                NavigationStack(path: $router.myTripsPath) {
+                    MyTripsView(
+                        onOpenSettings: {
                             withAnimation(.easeInOut(duration: 0.2)) {
-                                selectedTab = .myTrips
-                            }
-                        }
-                    )
-                case .settings:
-                    SettingsView(
-                        onLogout: onLogout,
-                        onBack: {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                selectedTab = .myTrips
+                                router.selectedTab = .settings
                             }
                         }
                     )
                 }
+                .opacity(router.selectedTab == .myTrips ? 1 : 0)
+                .allowsHitTesting(router.selectedTab == .myTrips)
+
+                NavigationStack(path: $router.archivePath) {
+                    ArchivedTripsView(
+                        onOpenSettings: {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                router.selectedTab = .settings
+                            }
+                        }
+                    )
+                }
+                .opacity(router.selectedTab == .archivedTrips ? 1 : 0)
+                .allowsHitTesting(router.selectedTab == .archivedTrips)
+
+                SettingsView(
+                    onLogout: onLogout,
+                    onBack: {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            router.selectedTab = .myTrips
+                        }
+                    }
+                )
+                .opacity(router.selectedTab == .settings ? 1 : 0)
+                .allowsHitTesting(router.selectedTab == .settings)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             VStack(spacing: 0) {
-                if selectedTab == .myTrips && !isViewingTripDetails {
+                if router.selectedTab == .myTrips && router.myTripsPath.isEmpty {
                     HStack {
                         Spacer()
                         newTripButton
@@ -112,9 +81,25 @@ struct MainTabView: View {
                     .transition(.scale.combined(with: .opacity))
                 }
 
-                bottomTabBar
-                    .offset(y: isShowingAIDrawer ? 120 : 0)
-                    .opacity(isShowingAIDrawer ? 0 : 1)
+                if router.myTripsPath.isEmpty && router.archivePath.isEmpty {
+                    bottomTabBar
+                }
+            }
+        }
+        .sheet(item: $router.presentedSheet) { sheet in
+            switch sheet {
+            case .newTrip:
+                NewTripView(
+                    onTripCreated: { _ in
+                        router.dismissSheet()
+                        NotificationCenter.default.post(name: .didCreateNewTrip, object: nil)
+                    },
+                    onCancel: {
+                        router.dismissSheet()
+                    }
+                )
+            case .editProfile, .addItem:
+                EmptyView()
             }
         }
         .ignoresSafeArea(.keyboard)
@@ -123,9 +108,7 @@ struct MainTabView: View {
 
     private var newTripButton: some View {
         Button(action: {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                selectedTab = .newTrip
-            }
+            router.present(.newTrip)
         }) {
             ZStack {
                 Circle()
@@ -151,17 +134,17 @@ struct MainTabView: View {
             ForEach(AppTab.allCases) { tab in
                 Button(action: {
                     withAnimation(.easeInOut(duration: 0.2)) {
-                        selectedTab = tab
+                        router.selectedTab = tab
                     }
                 }) {
                     VStack(spacing: 5) {
                         Image(systemName: tab.iconName)
-                            .font(.system(size: 20, weight: selectedTab == tab ? .semibold : .regular))
-                            .foregroundColor(selectedTab == tab ? AppTheme.skyCyan : AppTheme.textMuted)
+                            .font(.system(size: 20, weight: router.selectedTab == tab ? .semibold : .regular))
+                            .foregroundColor(router.selectedTab == tab ? AppTheme.skyCyan : AppTheme.textMuted)
 
                         Text(tab.title)
-                            .font(.system(size: 11, weight: selectedTab == tab ? .semibold : .medium))
-                            .foregroundColor(selectedTab == tab ? AppTheme.skyCyan : AppTheme.textMuted)
+                            .font(.system(size: 11, weight: router.selectedTab == tab ? .semibold : .medium))
+                            .foregroundColor(router.selectedTab == tab ? AppTheme.skyCyan : AppTheme.textMuted)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.top, 12)
@@ -180,11 +163,11 @@ struct MainTabView: View {
                 .ignoresSafeArea(edges: .bottom)
         )
     }
-
 }
 
 struct MainTabView_Previews: PreviewProvider {
     static var previews: some View {
         MainTabView()
+            .environmentObject(AppRouter())
     }
 }

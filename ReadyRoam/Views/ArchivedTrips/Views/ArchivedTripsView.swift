@@ -1,19 +1,15 @@
 import SwiftUI
 
 struct ArchivedTripsView: View {
-    @Binding var isViewingTripDetails: Bool
-    var onOpenSettings: (() -> Void)? = nil
-
+    @EnvironmentObject private var router: AppRouter
     @StateObject private var viewModel: ArchivedTripsViewModel
 
-    private let navigationAnimation = Animation.spring(response: 0.35, dampingFraction: 0.8)
+    var onOpenSettings: (() -> Void)? = nil
 
     init(
-        isViewingTripDetails: Binding<Bool> = .constant(false),
         onOpenSettings: (() -> Void)? = nil,
         viewModel: ArchivedTripsViewModel? = nil
     ) {
-        self._isViewingTripDetails = isViewingTripDetails
         self.onOpenSettings = onOpenSettings
         let container = AppContainer.shared
         self._viewModel = StateObject(wrappedValue: viewModel ?? ArchivedTripsViewModel(tripService: container.tripService))
@@ -24,17 +20,25 @@ struct ArchivedTripsView: View {
             AppTheme.darkBackground
                 .ignoresSafeArea()
 
-            if let trip = viewModel.selectedTripForDetails {
-                tripDetailsView(for: trip)
-            } else {
-                archivedTripsContent
-            }
+            archivedTripsContent
         }
         .preferredColorScheme(.dark)
+        .navigationDestination(for: Route.self) { route in
+            switch route {
+            case .archivedTripDetails(let trip), .tripDetails(let trip):
+                TripDetailsView(
+                    trip: trip,
+                    isReadOnly: true,
+                    onTripDeleted: { deletedId in
+                        viewModel.removeTrip(id: deletedId)
+                        router.pop()
+                    }
+                )
+            }
+        }
         .task {
             await viewModel.loadArchivedTrips()
         }
-        .simultaneousGesture(backSwipeGesture)
     }
 
     private var archivedTripsContent: some View {
@@ -69,28 +73,10 @@ struct ArchivedTripsView: View {
         VStack(spacing: 16) {
             ForEach(viewModel.archivedTrips) { trip in
                 ArchivedTripCard(trip: trip) {
-                    openTrip(trip)
+                    router.open(trip, isArchived: true)
                 }
             }
         }
-    }
-
-    private func tripDetailsView(for trip: Trip) -> some View {
-        TripDetailsView(
-            isViewingTripDetails: $isViewingTripDetails,
-            isShowingAIDrawer: .constant(false),
-            trip: trip,
-            isReadOnly: true,
-            onTripDeleted: { deletedId in
-                viewModel.removeTrip(id: deletedId)
-                closeTripDetails()
-            },
-            onBack: {
-                closeTripDetails()
-            }
-        )
-        .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .trailing)))
-        .zIndex(10)
     }
 
     private var headerBar: some View {
@@ -109,7 +95,11 @@ struct ArchivedTripsView: View {
             Spacer()
 
             Button(action: {
-                onOpenSettings?()
+                if let onOpenSettings = onOpenSettings {
+                    onOpenSettings()
+                } else {
+                    router.selectedTab = .settings
+                }
             }) {
                 ZStack {
                     Circle()
@@ -198,29 +188,11 @@ struct ArchivedTripsView: View {
         .background(Color(hex: "F59E0B").opacity(0.12))
         .cornerRadius(8)
     }
+}
 
-    private func openTrip(_ trip: Trip) {
-        withAnimation(navigationAnimation) {
-            viewModel.selectedTripForDetails = trip
-            isViewingTripDetails = true
-        }
-    }
-
-    private func closeTripDetails() {
-        withAnimation(navigationAnimation) {
-            viewModel.selectedTripForDetails = nil
-            isViewingTripDetails = false
-        }
-    }
-
-    private var backSwipeGesture: some Gesture {
-        DragGesture(minimumDistance: 20, coordinateSpace: .local)
-            .onEnded { value in
-                if value.startLocation.x < 50 && value.translation.width > 60 && abs(value.translation.height) < 80 {
-                    if viewModel.selectedTripForDetails != nil {
-                        closeTripDetails()
-                    }
-                }
-            }
+struct ArchivedTripsView_Previews: PreviewProvider {
+    static var previews: some View {
+        ArchivedTripsView()
+            .environmentObject(AppRouter())
     }
 }

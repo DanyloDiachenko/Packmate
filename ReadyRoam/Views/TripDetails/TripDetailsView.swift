@@ -258,16 +258,19 @@ struct TripDetailsView: View {
     }
 
     private var drawerContent: some View {
-        ZStack(alignment: .bottom) {
-            aiSuggestionsDrawerSection
-            addItemDrawerSection
+        GeometryReader { geometry in
+            ZStack(alignment: .bottom) {
+                aiSuggestionsDrawerSection(height: geometry.size.height * 0.72)
+                addItemDrawerSection(height: geometry.size.height * 0.68)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         }
     }
 
-    private var aiSuggestionsDrawerSection: some View {
+    private func aiSuggestionsDrawerSection(height: CGFloat) -> some View {
         SlidingDrawerContainer(
             isShowing: viewModel.showingAIDrawer,
-            height: viewModel.drawerHeight,
+            height: height,
             dragOffset: $viewModel.dragOffset,
             onDismiss: {
                 viewModel.closeDrawer(isShowingAIDrawerBinding: $isShowingAIDrawer)
@@ -303,10 +306,10 @@ struct TripDetailsView: View {
         }
     }
 
-    private var addItemDrawerSection: some View {
+    private func addItemDrawerSection(height: CGFloat) -> some View {
         SlidingDrawerContainer(
             isShowing: viewModel.showingAddItemDrawer,
-            height: viewModel.addItemDrawerHeight,
+            height: height,
             dragOffset: $viewModel.addItemDragOffset,
             onDismiss: {
                 viewModel.closeDrawer(isShowingAIDrawerBinding: $isShowingAIDrawer)
@@ -341,7 +344,7 @@ struct TripDetailsView: View {
 struct TripDetailsView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationStack {
-            TripDetailsView()
+            TripDetailsView(trip: Trip(destination: "Paris", country: "France", flagEmoji: "🇫🇷", dateRange: "May 1 - May 7", nightsCount: 6, daysUntil: 5))
         }
     }
 }
