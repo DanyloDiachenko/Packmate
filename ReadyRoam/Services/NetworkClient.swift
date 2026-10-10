@@ -43,15 +43,21 @@ public protocol NetworkClientProtocol: Sendable {
     func requestVoid(_ request: URLRequest) async throws
 }
 
-@MainActor
 public final class URLSessionNetworkClient: NetworkClientProtocol, @unchecked Sendable {
+
+    public static var defaultSession: URLSession {
+        let configuration = URLSessionConfiguration.default
+        configuration.timeoutIntervalForRequest = 15
+        configuration.timeoutIntervalForResource = 30
+        return URLSession(configuration: configuration)
+    }
 
     private let session: URLSession
     private let tokenProvider: AccessTokenProvider?
     private let config: AppConfig
 
     public init(
-        session: URLSession = .shared,
+        session: URLSession = URLSessionNetworkClient.defaultSession,
         tokenProvider: AccessTokenProvider? = nil,
         config: AppConfig = .shared
     ) {
@@ -61,12 +67,12 @@ public final class URLSessionNetworkClient: NetworkClientProtocol, @unchecked Se
     }
 
     public func request<T: Decodable>(_ endpoint: Endpoint) async throws -> T {
-        let urlRequest = try buildURLRequest(from: endpoint)
+        let urlRequest = try await buildURLRequest(from: endpoint)
         return try await request(urlRequest)
     }
 
     public func requestVoid(_ endpoint: Endpoint) async throws {
-        let urlRequest = try buildURLRequest(from: endpoint)
+        let urlRequest = try await buildURLRequest(from: endpoint)
         try await requestVoid(urlRequest)
     }
 
@@ -83,8 +89,8 @@ public final class URLSessionNetworkClient: NetworkClientProtocol, @unchecked Se
         _ = try await perform(request)
     }
 
-    private func buildURLRequest(from endpoint: Endpoint) throws -> URLRequest {
-        let baseURL = config.baseURL
+    private func buildURLRequest(from endpoint: Endpoint) async throws -> URLRequest {
+        let baseURL = await MainActor.run { config.baseURL }
         let cleanPath = endpoint.path.hasPrefix("/") ? String(endpoint.path.dropFirst()) : endpoint.path
         let urlWithPath = baseURL.appendingPathComponent(cleanPath)
 
@@ -134,8 +140,17 @@ public final class URLSessionNetworkClient: NetworkClientProtocol, @unchecked Se
 
         do {
             (data, response) = try await session.data(for: request)
-        } catch let urlErr as URLError where urlErr.code == .cancelled {
-            throw APIError.cancelled
+        } catch let urlErr as URLError {
+            switch urlErr.code {
+            case .cancelled:
+                throw APIError.cancelled
+            case .notConnectedToInternet, .networkConnectionLost:
+                throw APIError.networkError("No internet connection. Please check your network settings and try again.")
+            case .timedOut:
+                throw APIError.networkError("The request timed out. Please try again.")
+            default:
+                throw APIError.networkError(urlErr.localizedDescription)
+            }
         } catch {
             if Task.isCancelled {
                 throw APIError.cancelled
@@ -161,5 +176,4 @@ public final class URLSessionNetworkClient: NetworkClientProtocol, @unchecked Se
     private func parseServerErrorMessage(from data: Data) -> String? {
         return ServerErrorParser.parseErrorMessage(from: data)
     }
-
 }

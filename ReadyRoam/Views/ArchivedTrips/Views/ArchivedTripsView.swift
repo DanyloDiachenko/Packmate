@@ -158,21 +158,15 @@ struct ArchivedTripsView: View {
     }
 
     private func errorView(_ message: String) -> some View {
-        VStack(spacing: 12) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 32))
-                .foregroundColor(Color(hex: "EF4444"))
-
-            Text("Failed to load archived trips")
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(AppTheme.textPrimary)
-
-            Text(message)
-                .font(.system(size: 13))
-                .foregroundColor(AppTheme.textMuted)
-                .multilineTextAlignment(.center)
-        }
-        .padding(.top, 40)
+        ErrorStateView(
+            title: "Failed to load archived trips",
+            message: message,
+            onRetry: {
+                Task {
+                    await viewModel.loadArchivedTrips()
+                }
+            }
+        )
     }
 
     private func refreshErrorBanner(_ message: String) -> some View {

@@ -10,63 +10,64 @@ final class TripItemService: TripItemServiceProtocol, ObservableObject {
 
     func fetchTripItems(tripId: UUID) async throws -> [TripSectionGroupResponse] {
         let endpoint = Endpoint(
-            path: "trip-items/\(tripId.uuidString.lowercased())",
-            method: .get,
-            requiresAuth: true
+            path: "trips/\(tripId.uuidString)/items",
+            method: .get
         )
         return try await networkClient.request(endpoint)
     }
 
-    func createTripItem(tripId: UUID, request dto: CreateTripItemRequest) async throws -> TripItemResponse {
-        let bodyData = try JSONEncoder().encode(dto)
+    func createTripItem(tripId: UUID, request: CreateTripItemRequest) async throws -> TripItemResponse {
+        let encoder = JSONEncoder()
+        let bodyData = try encoder.encode(request)
+
         let endpoint = Endpoint(
-            path: "trip-items/\(tripId.uuidString.lowercased())",
+            path: "trips/\(tripId.uuidString)/items",
             method: .post,
-            body: bodyData,
-            requiresAuth: true
+            body: bodyData
         )
         return try await networkClient.request(endpoint)
     }
 
     func bulkCreateTripItems(tripId: UUID, items: [CreateTripItemRequest]) async throws -> [TripItemResponse] {
-        let bodyData = try JSONEncoder().encode(BulkCreateTripItemsRequest(items: items))
+        let encoder = JSONEncoder()
+        let bodyData = try encoder.encode(items)
+
         let endpoint = Endpoint(
-            path: "trip-items/\(tripId.uuidString.lowercased())/bulk",
+            path: "trips/\(tripId.uuidString)/items/bulk",
             method: .post,
-            body: bodyData,
-            requiresAuth: true
+            body: bodyData
         )
         return try await networkClient.request(endpoint)
     }
 
-    func updateTripItem(id: UUID, request dto: UpdateTripItemRequest) async throws -> TripItemResponse {
-        let bodyData = try JSONEncoder().encode(dto)
+    func updateTripItem(id: UUID, request: UpdateTripItemRequest) async throws -> TripItemResponse {
+        let encoder = JSONEncoder()
+        let bodyData = try encoder.encode(request)
+
         let endpoint = Endpoint(
-            path: "trip-items/\(id.uuidString.lowercased())",
+            path: "trip-items/\(id.uuidString)",
             method: .put,
-            body: bodyData,
-            requiresAuth: true
+            body: bodyData
         )
         return try await networkClient.request(endpoint)
     }
 
     func deleteTripItem(id: UUID) async throws {
         let endpoint = Endpoint(
-            path: "trip-items/\(id.uuidString.lowercased())",
-            method: .delete,
-            requiresAuth: true
+            path: "trip-items/\(id.uuidString)",
+            method: .delete
         )
         try await networkClient.requestVoid(endpoint)
     }
 
     static let defaultItemsForNewTrip: [CreateTripItemRequest] = [
-        CreateTripItemRequest(section: "Documents & Money", title: "Passport", quantity: 1, tag: "Important"),
-        CreateTripItemRequest(section: "Documents & Money", title: "Credit Cards / Cash", quantity: 1, tag: "Important"),
-        CreateTripItemRequest(section: "Documents & Money", title: "Travel Insurance & Tickets", quantity: 1, tag: "Important"),
+        CreateTripItemRequest(section: "Essentials & Documents", title: "Passport / ID", quantity: 1, tag: "Essential"),
+        CreateTripItemRequest(section: "Essentials & Documents", title: "Boarding Pass & Tickets", quantity: 1, tag: "Essential"),
+        CreateTripItemRequest(section: "Essentials & Documents", title: "Credit Cards & Cash", quantity: 1, tag: "Essential"),
+        CreateTripItemRequest(section: "Clothes & Footwear", title: "T-Shirts / Tops", quantity: 4, tag: "Important"),
+        CreateTripItemRequest(section: "Clothes & Footwear", title: "Pants / Jeans", quantity: 2, tag: "Important"),
+        CreateTripItemRequest(section: "Clothes & Footwear", title: "Underwear & Socks", quantity: 5, tag: "Essential"),
         CreateTripItemRequest(section: "Clothes & Footwear", title: "Comfortable Walking Shoes", quantity: 1, tag: "Important"),
-        CreateTripItemRequest(section: "Clothes & Footwear", title: "T-Shirts & Tops", quantity: 3, tag: "Important"),
-        CreateTripItemRequest(section: "Clothes & Footwear", title: "Underwear & Socks", quantity: 4, tag: "Important"),
-        CreateTripItemRequest(section: "Clothes & Footwear", title: "Jacket / Outerwear", quantity: 1, tag: "Important"),
         CreateTripItemRequest(section: "Electronics & Tech", title: "Smartphone", quantity: 1, tag: "Important"),
         CreateTripItemRequest(section: "Electronics & Tech", title: "Phone Charger", quantity: 1, tag: "Important"),
         CreateTripItemRequest(section: "Electronics & Tech", title: "Power Bank", quantity: 1, tag: "Important"),
@@ -79,13 +80,13 @@ final class TripItemService: TripItemServiceProtocol, ObservableObject {
         CreateTripItemRequest(section: "Misc & Gear", title: "Daypack / Backpack", quantity: 1, tag: "Important")
     ]
 
-    func seedDefaultItems(for tripId: UUID) async {
+    func seedDefaultItems(for tripId: UUID) async throws {
         let items = Self.defaultItemsForNewTrip
         do {
             _ = try await bulkCreateTripItems(tripId: tripId, items: items)
         } catch {
             for item in items {
-                _ = try? await createTripItem(tripId: tripId, request: item)
+                _ = try await createTripItem(tripId: tripId, request: item)
             }
         }
     }

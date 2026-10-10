@@ -39,7 +39,7 @@ protocol TripItemServiceProtocol: ObservableObject {
     func bulkCreateTripItems(tripId: UUID, items: [CreateTripItemRequest]) async throws -> [TripItemResponse]
     func updateTripItem(id: UUID, request: UpdateTripItemRequest) async throws -> TripItemResponse
     func deleteTripItem(id: UUID) async throws
-    func seedDefaultItems(for tripId: UUID) async
+    func seedDefaultItems(for tripId: UUID) async throws
 }
 
 @MainActor

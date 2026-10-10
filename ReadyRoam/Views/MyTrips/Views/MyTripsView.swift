@@ -155,21 +155,15 @@ struct MyTripsView: View {
     }
 
     private func errorView(_ message: String) -> some View {
-        VStack(spacing: 12) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 32))
-                .foregroundColor(Color(hex: "EF4444"))
-
-            Text("Failed to load trips")
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(AppTheme.textPrimary)
-
-            Text(message)
-                .font(.system(size: 13))
-                .foregroundColor(AppTheme.textMuted)
-                .multilineTextAlignment(.center)
-        }
-        .padding(.top, 40)
+        ErrorStateView(
+            title: "Failed to load trips",
+            message: message,
+            onRetry: {
+                Task {
+                    await viewModel.loadInitialTrips()
+                }
+            }
+        )
     }
 
     private func refreshErrorBanner(_ message: String) -> some View {

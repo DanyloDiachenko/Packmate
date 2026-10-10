@@ -5,6 +5,7 @@ public enum APIError: Error, LocalizedError, Equatable {
     case httpError(statusCode: Int, message: String?)
     case decodingError(String)
     case networkError(String)
+    case notFound(String)
     case unauthorized
     case cancelled
 
@@ -20,6 +21,8 @@ public enum APIError: Error, LocalizedError, Equatable {
         case .decodingError(let details):
             return details.isEmpty ? "Failed to parse server response." : "Failed to parse server response: \(details)"
         case .networkError(let message):
+            return message
+        case .notFound(let message):
             return message
         case .unauthorized:
             return "Session expired. Please log in again."
@@ -38,6 +41,8 @@ public enum APIError: Error, LocalizedError, Equatable {
             return true
         case let (.decodingError(d1), .decodingError(d2)):
             return d1 == d2
+        case let (.notFound(msg1), .notFound(msg2)):
+            return msg1 == msg2
         case let (.httpError(code1, msg1), .httpError(code2, msg2)):
             return code1 == code2 && msg1 == msg2
         case let (.networkError(msg1), .networkError(msg2)):

@@ -9,22 +9,22 @@ final class DestinationService: DestinationServiceProtocol, ObservableObject {
     }
 
     func searchDestinations(query: String) async throws -> [DestinationDto] {
-        return await searchDestinationsInternal(query: query, limit: 20)
+        return try await searchDestinationsInternal(query: query, limit: 20)
     }
 
     func getPopularDestinations() async throws -> [DestinationDto] {
-        return await searchDestinationsInternal(query: nil, limit: 20)
+        return try await searchDestinationsInternal(query: nil, limit: 20)
     }
 
     func getDestinationByCity(city: String) async throws -> DestinationDto {
-        let results = await searchDestinationsInternal(query: city, limit: 1)
-        if let match = results.first {
-            return match
+        let results = try await searchDestinationsInternal(query: city, limit: 1)
+        guard let match = results.first else {
+            throw APIError.notFound("Destination '\(city)' not found.")
         }
-        return DestinationDto(country: "Unknown", city: city, countryFlag: "✈️", bannerImage: nil)
+        return match
     }
 
-    func searchDestinationsInternal(query: String?, limit: Int = 20) async -> [DestinationDto] {
+    private func searchDestinationsInternal(query: String?, limit: Int = 20) async throws -> [DestinationDto] {
         var queryItems: [URLQueryItem] = [
             URLQueryItem(name: "limit", value: "\(limit)")
         ]
@@ -39,10 +39,6 @@ final class DestinationService: DestinationServiceProtocol, ObservableObject {
             requiresAuth: false
         )
 
-        do {
-            return try await networkClient.request(endpoint)
-        } catch {
-            return []
-        }
+        return try await networkClient.request(endpoint)
     }
 }

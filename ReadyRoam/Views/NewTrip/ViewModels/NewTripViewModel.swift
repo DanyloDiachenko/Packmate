@@ -8,6 +8,7 @@ final class NewTripViewModel: ObservableObject {
     @Published var isSearchActive: Bool = false
     @Published var searchResults: [DestinationDto] = []
     @Published var isLoadingDestinations: Bool = false
+    @Published var destinationSearchState: LoadState<[DestinationDto]> = .idle
     @Published var selectedDestination: DestinationDto? = nil
     @Published var isSelectingDestination: Bool = false
     @Published var isCreatingTrip: Bool = false
@@ -116,6 +117,7 @@ final class NewTripViewModel: ObservableObject {
         let queryToken = query
         currentSearchQueryToken = queryToken
         isLoadingDestinations = true
+        destinationSearchState = .loading
         defer {
             if currentSearchQueryToken == queryToken {
                 isLoadingDestinations = false
@@ -126,10 +128,15 @@ final class NewTripViewModel: ObservableObject {
             let results = try await destinationService.searchDestinations(query: queryToken)
             guard !Task.isCancelled, currentSearchQueryToken == queryToken else { return }
             self.searchResults = results
+            if results.isEmpty {
+                self.destinationSearchState = .empty
+            } else {
+                self.destinationSearchState = .loaded(results)
+            }
         } catch {
             guard !Task.isCancelled, currentSearchQueryToken == queryToken else { return }
-            print("Failed to search destinations: \(error)")
             self.searchResults = []
+            self.destinationSearchState = .failed(message: error.localizedDescription)
         }
     }
 
@@ -219,7 +226,6 @@ final class NewTripViewModel: ObservableObject {
         let dep = dateSelection.departDate ?? Date()
         let ret = dateSelection.returnDate ?? cal.date(byAdding: .day, value: 6, to: dep)!
 
-        let nights = max(1, cal.dateComponents([.day], from: dep, to: ret).day ?? 1)
         let flag = selected.countryFlag
         let selectedTags = selectedTripTypes.map { $0.tagKey }
         let banner = selected.bannerImage
@@ -243,7 +249,7 @@ final class NewTripViewModel: ObservableObject {
 
         do {
             let createdDto = try await tripService.createTrip(request: reqDto)
-            await tripItemService.seedDefaultItems(for: createdDto.id)
+            try? await tripItemService.seedDefaultItems(for: createdDto.id)
 
             let tripToEmit = Trip(
                 from: createdDto,
@@ -255,7 +261,6 @@ final class NewTripViewModel: ObservableObject {
                 onSuccess(tripToEmit)
             }
         } catch {
-            print("Failed to create trip on server: \(error)")
             await MainActor.run {
                 errorMessage = error.localizedDescription
                 showingErrorAlert = true
