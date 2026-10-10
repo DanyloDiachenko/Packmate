@@ -6,14 +6,11 @@ enum Route: Hashable {
 }
 
 enum Sheet: Identifiable {
-    case newTrip
     case editProfile
     case addItem(tripId: UUID)
 
     var id: String {
         switch self {
-        case .newTrip:
-            return "newTrip"
         case .editProfile:
             return "editProfile"
         case .addItem(let tripId):
@@ -24,6 +21,7 @@ enum Sheet: Identifiable {
 
 extension Notification.Name {
     static let didCreateNewTrip = Notification.Name("didCreateNewTrip")
+    static let didDeleteTrip = Notification.Name("didDeleteTrip")
 }
 
 @MainActor
@@ -32,6 +30,8 @@ final class AppRouter: ObservableObject {
     @Published var myTripsPath: [Route] = []
     @Published var archivePath: [Route] = []
     @Published var presentedSheet: Sheet?
+    @Published var isShowingNewTripDrawer: Bool = false
+    @Published var newTripDragOffset: CGFloat = 0
 
     func open(_ trip: Trip, isArchived: Bool = false) {
         if isArchived {
@@ -73,5 +73,19 @@ final class AppRouter: ObservableObject {
 
     func dismissSheet() {
         presentedSheet = nil
+    }
+
+    func presentNewTripDrawer() {
+        withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+            isShowingNewTripDrawer = true
+            newTripDragOffset = 0
+        }
+    }
+
+    func dismissNewTripDrawer() {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            isShowingNewTripDrawer = false
+            newTripDragOffset = 0
+        }
     }
 }

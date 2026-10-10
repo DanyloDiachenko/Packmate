@@ -14,6 +14,7 @@ extension TripDetailsViewModel {
         do {
             try await tripService.deleteTrip(id: id)
             await MainActor.run {
+                NotificationCenter.default.post(name: .didDeleteTrip, object: id)
                 onTripDeleted?(id)
                 dismiss()
             }
@@ -60,6 +61,7 @@ extension TripDetailsViewModel {
     }
 
     func closeDrawer(isShowingAIDrawerBinding: Binding<Bool>? = nil) {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         withAnimation(drawerAnimation) {
             activeDrawer = .none
             isShowingAIDrawerBinding?.wrappedValue = false

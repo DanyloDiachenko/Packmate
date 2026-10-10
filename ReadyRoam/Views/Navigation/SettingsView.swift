@@ -35,9 +35,19 @@ struct SettingsView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .simultaneousGesture(backSwipeGesture)
         .sheet(isPresented: $showingEditProfile) {
             editProfileSheet
         }
+    }
+
+    private var backSwipeGesture: some Gesture {
+        DragGesture(minimumDistance: 20, coordinateSpace: .local)
+            .onEnded { value in
+                if value.startLocation.x < 50 && value.translation.width > 60 && abs(value.translation.height) < 80 {
+                    handleBackNavigation()
+                }
+            }
     }
 
     private func handleBackNavigation() {

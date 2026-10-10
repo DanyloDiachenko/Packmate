@@ -51,7 +51,7 @@ struct DestinationDropdownCard: View {
                             .foregroundColor(AppTheme.textMuted)
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 28)
+                    .padding(.vertical, 20)
                 } else {
                     VStack(spacing: 0) {
                         ForEach(results) { item in
@@ -95,6 +95,7 @@ struct DestinationDropdownCard: View {
                 }
             }
             .frame(maxHeight: 240)
+            .fixedSize(horizontal: false, vertical: true)
         }
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)

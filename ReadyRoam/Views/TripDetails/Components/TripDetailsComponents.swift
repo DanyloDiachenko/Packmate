@@ -220,7 +220,7 @@ struct TripDetailsBottomBarView: View {
         }
         .padding(.horizontal, 20)
         .padding(.top, 12)
-        .padding(.bottom, 82)
+        .padding(.bottom, 20)
         .background(
             LinearGradient(
                 colors: [Color.clear, AppTheme.darkBackground.opacity(0.8), AppTheme.darkBackground],

@@ -51,6 +51,7 @@ struct SlidingDrawerContainer<Content: View>: View {
                     }
                     .onEnded { value in
                         if value.translation.height > dismissThreshold {
+                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                             onDismiss()
                         } else {
                             onDragReset()

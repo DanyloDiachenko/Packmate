@@ -10,7 +10,7 @@ final class TripItemService: TripItemServiceProtocol, ObservableObject {
 
     func fetchTripItems(tripId: UUID) async throws -> [TripSectionGroupResponse] {
         let endpoint = Endpoint(
-            path: "trips/\(tripId.uuidString)/items",
+            path: "trip-items/\(tripId.uuidString)",
             method: .get
         )
         return try await networkClient.request(endpoint)
@@ -21,7 +21,7 @@ final class TripItemService: TripItemServiceProtocol, ObservableObject {
         let bodyData = try encoder.encode(request)
 
         let endpoint = Endpoint(
-            path: "trips/\(tripId.uuidString)/items",
+            path: "trip-items/\(tripId.uuidString)",
             method: .post,
             body: bodyData
         )
@@ -30,10 +30,11 @@ final class TripItemService: TripItemServiceProtocol, ObservableObject {
 
     func bulkCreateTripItems(tripId: UUID, items: [CreateTripItemRequest]) async throws -> [TripItemResponse] {
         let encoder = JSONEncoder()
-        let bodyData = try encoder.encode(items)
+        let bulkRequest = BulkCreateTripItemsRequest(items: items)
+        let bodyData = try encoder.encode(bulkRequest)
 
         let endpoint = Endpoint(
-            path: "trips/\(tripId.uuidString)/items/bulk",
+            path: "trip-items/\(tripId.uuidString)/bulk",
             method: .post,
             body: bodyData
         )
@@ -46,7 +47,7 @@ final class TripItemService: TripItemServiceProtocol, ObservableObject {
 
         let endpoint = Endpoint(
             path: "trip-items/\(id.uuidString)",
-            method: .put,
+            method: .patch,
             body: bodyData
         )
         return try await networkClient.request(endpoint)

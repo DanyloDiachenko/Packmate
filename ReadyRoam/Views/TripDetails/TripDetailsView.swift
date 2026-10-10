@@ -124,14 +124,14 @@ struct TripDetailsView: View {
                         } else {
                             categoryCardsList
 
-                            if viewModel.tripId != nil && !viewModel.isReadOnly {
+                            if viewModel.tripId != nil {
                                 deleteTripButton
                             }
                         }
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 4)
-                    .padding(.bottom, 180)
+                    .padding(.bottom, 100)
                 }
                 .refreshable {
                     await viewModel.loadTripItems()

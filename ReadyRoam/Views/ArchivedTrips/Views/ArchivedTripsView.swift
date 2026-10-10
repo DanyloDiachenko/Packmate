@@ -23,6 +23,7 @@ struct ArchivedTripsView: View {
             archivedTripsContent
         }
         .preferredColorScheme(.dark)
+        .simultaneousGesture(backSwipeGesture)
         .navigationDestination(for: Route.self) { route in
             switch route {
             case .archivedTripDetails(let trip), .tripDetails(let trip):
@@ -32,6 +33,9 @@ struct ArchivedTripsView: View {
                     onTripDeleted: { deletedId in
                         viewModel.removeTrip(id: deletedId)
                         router.pop()
+                    },
+                    onBack: {
+                        router.pop()
                     }
                 )
             }
@@ -39,6 +43,17 @@ struct ArchivedTripsView: View {
         .task {
             await viewModel.loadArchivedTrips()
         }
+    }
+
+    private var backSwipeGesture: some Gesture {
+        DragGesture(minimumDistance: 20, coordinateSpace: .local)
+            .onEnded { value in
+                if router.archivePath.isEmpty && value.startLocation.x < 50 && value.translation.width > 60 && abs(value.translation.height) < 80 {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        router.selectedTab = .myTrips
+                    }
+                }
+            }
     }
 
     private var archivedTripsContent: some View {

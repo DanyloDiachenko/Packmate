@@ -117,7 +117,7 @@ struct TripCalendarView: View {
                         let dayNumber = week * 7 + dayOfWeek - firstWeekdayOffset + 1
 
                         if dayNumber >= 1 && dayNumber <= totalDays {
-                            if let cellDate = cal.date(bySetting: .day, value: dayNumber, of: firstDayOfMonth) {
+                            if let cellDate = cal.date(byAdding: .day, value: dayNumber - 1, to: firstDayOfMonth) {
                                 calendarDayCell(date: cal.startOfDay(for: cellDate), dayNumber: dayNumber)
                             } else {
                                 emptyCell

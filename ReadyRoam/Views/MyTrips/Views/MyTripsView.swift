@@ -36,7 +36,7 @@ struct MyTripsView: View {
                         errorView(error)
                     } else if viewModel.trips.isEmpty {
                         EmptyTripsView(onPlanTrip: {
-                            router.present(.newTrip)
+                            router.presentNewTripDrawer()
                         })
                     } else {
                         populatedTripsView

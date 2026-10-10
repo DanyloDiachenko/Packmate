@@ -10,13 +10,18 @@ struct NewTripView: View {
 
     var onTripCreated: ((Trip) -> Void)? = nil
     var onCancel: (() -> Void)? = nil
+    @Binding var dragOffset: CGFloat
 
     init(
         existingTrips: [Trip] = [],
         onTripCreated: ((Trip) -> Void)? = nil,
         onCancel: (() -> Void)? = nil,
+        dragOffset: Binding<CGFloat> = .constant(0),
         viewModel: NewTripViewModel? = nil
     ) {
+        self.onTripCreated = onTripCreated
+        self.onCancel = onCancel
+        self._dragOffset = dragOffset
         let container = AppContainer.shared
         self._viewModel = StateObject(wrappedValue: viewModel ?? NewTripViewModel(
             existingTrips: existingTrips,
@@ -32,91 +37,117 @@ struct NewTripView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                headerBar
-                    .padding(.horizontal, 20)
-                    .padding(.top, 14)
-                    .padding(.bottom, 12)
+                VStack(spacing: 0) {
+                    Capsule()
+                        .fill(Color.white.opacity(0.25))
+                        .frame(width: 38, height: 4)
+                        .padding(.top, 10)
+                        .padding(.bottom, 6)
+
+                    headerBar
+                        .padding(.horizontal, 20)
+                        .padding(.top, 6)
+                        .padding(.bottom, 12)
+                }
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 10)
+                        .onChanged { value in
+                            if value.translation.height > 0 {
+                                dragOffset = value.translation.height
+                            }
+                        }
+                        .onEnded { value in
+                            if value.translation.height > 60 {
+                                cancelView()
+                            } else {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                    dragOffset = 0
+                                }
+                            }
+                        }
+                )
 
                 ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 22) {
-                        DestinationSearchSection(
-                            destinationText: $viewModel.destinationText,
-                            isSearchActive: viewModel.isSearchActive,
-                            focusState: $isSearchFieldFocused,
-                            onClear: {
-                                viewModel.destinationText = ""
-                                viewModel.selectedDestination = nil
-                            },
-                            onTap: {
-                                withAnimation(.spring(response: 0.28, dampingFraction: 0.8)) {
-                                    viewModel.isSearchActive = true
-                                    isSearchFieldFocused = true
-                                }
-                                if viewModel.searchResults.isEmpty {
-                                    Task {
-                                        await viewModel.fetchDestinations(query: viewModel.destinationText)
+                    ZStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 22) {
+                            DestinationSearchSection(
+                                destinationText: $viewModel.destinationText,
+                                isSearchActive: viewModel.isSearchActive,
+                                focusState: $isSearchFieldFocused,
+                                onClear: {
+                                    viewModel.destinationText = ""
+                                    viewModel.selectedDestination = nil
+                                },
+                                onTap: {
+                                    withAnimation(.spring(response: 0.28, dampingFraction: 0.8)) {
+                                        viewModel.isSearchActive = true
+                                        isSearchFieldFocused = true
+                                    }
+                                    if viewModel.searchResults.isEmpty {
+                                        Task {
+                                            await viewModel.fetchDestinations(query: viewModel.destinationText)
+                                        }
                                     }
                                 }
-                            }
-                        )
+                            )
 
-                        TripCalendarView(
-                            dateSelection: $viewModel.dateSelection,
-                            blockedDates: viewModel.blockedDates,
-                            onDateTap: { date in
-                                viewModel.handleDateTap(date: date)
-                            },
-                            onPrevMonth: {
-                                if viewModel.dateSelection.viewingMonthIndex > 0 {
-                                    viewModel.dateSelection.viewingMonthIndex -= 1
+                            TripCalendarView(
+                                dateSelection: $viewModel.dateSelection,
+                                blockedDates: viewModel.blockedDates,
+                                onDateTap: { date in
+                                    viewModel.handleDateTap(date: date)
+                                },
+                                onPrevMonth: {
+                                    if viewModel.dateSelection.viewingMonthIndex > 0 {
+                                        viewModel.dateSelection.viewingMonthIndex -= 1
+                                    }
+                                },
+                                onNextMonth: {
+                                    if viewModel.dateSelection.viewingMonthIndex < viewModel.dateSelection.availableMonths.count - 1 {
+                                        viewModel.dateSelection.viewingMonthIndex += 1
+                                    }
                                 }
-                            },
-                            onNextMonth: {
-                                if viewModel.dateSelection.viewingMonthIndex < viewModel.dateSelection.availableMonths.count - 1 {
-                                    viewModel.dateSelection.viewingMonthIndex += 1
-                                }
-                            }
-                        )
+                            )
 
-                        TripTypeSelector(selectedTripTypes: $viewModel.selectedTripTypes)
+                            TripTypeSelector(selectedTripTypes: $viewModel.selectedTripTypes)
+                        }
+
+                        if viewModel.isSearchActive {
+                            Color.black.opacity(0.001)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    closeSearchSelector()
+                                }
+                                .zIndex(15)
+
+                            DestinationDropdownCard(
+                                destinationText: viewModel.destinationText,
+                                isLoading: viewModel.isLoadingDestinations,
+                                results: viewModel.searchResults,
+                                onSelect: { item in
+                                    viewModel.selectDestination(item)
+                                    isSearchFieldFocused = false
+                                },
+                                onClose: {
+                                    closeSearchSelector()
+                                }
+                            )
+                            .padding(.top, 78)
+                            .zIndex(20)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 4)
-                    .padding(.bottom, 175)
+                    .padding(.bottom, 90)
                 }
-            }
-
-            if viewModel.isSearchActive {
-                Color.black.opacity(0.45)
-                    .ignoresSafeArea()
-                    .transition(.opacity)
-                    .onTapGesture {
-                        closeSearchSelector()
-                    }
-
-                VStack {
-                    DestinationDropdownCard(
-                        destinationText: viewModel.destinationText,
-                        isLoading: viewModel.isLoadingDestinations,
-                        results: viewModel.searchResults,
-                        onSelect: { item in
-                            viewModel.selectDestination(item)
-                            isSearchFieldFocused = false
-                        },
-                        onClose: {
-                            closeSearchSelector()
-                        }
-                    )
-                    .padding(.horizontal, 20)
-                    .padding(.top, 116)
-
-                    Spacer()
-                }
-                .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
             fixedBottomBar
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .preferredColorScheme(.dark)
         .alert("Error Creating Trip", isPresented: $viewModel.showingErrorAlert) {
             Button("OK", role: .cancel) {}
@@ -126,12 +157,36 @@ struct NewTripView: View {
         .task {
             await viewModel.loadInitialData()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .didDeleteTrip)) { notification in
+            if let deletedId = notification.object as? UUID {
+                viewModel.removeTrip(id: deletedId)
+            }
+        }
+        .onChange(of: isSearchFieldFocused) { isFocused in
+            if isFocused {
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.8)) {
+                    viewModel.isSearchActive = true
+                }
+                if viewModel.searchResults.isEmpty {
+                    Task {
+                        await viewModel.fetchDestinations(query: viewModel.destinationText)
+                    }
+                }
+            } else if viewModel.isSearchActive {
+                closeSearchSelector()
+            }
+        }
         .onChange(of: viewModel.destinationText) { newText in
             guard !viewModel.isSelectingDestination else { return }
             if let selected = viewModel.selectedDestination {
                 let formatted = "\(selected.city), \(selected.country)"
                 if newText != formatted && newText != selected.city {
                     viewModel.selectedDestination = nil
+                }
+            }
+            if !viewModel.isSearchActive && isSearchFieldFocused {
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.8)) {
+                    viewModel.isSearchActive = true
                 }
             }
             searchTask?.cancel()
@@ -161,6 +216,9 @@ struct NewTripView: View {
     }
 
     private func cancelView() {
+        isSearchFieldFocused = false
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        viewModel.resetState()
         if let onCancel = onCancel {
             onCancel()
         } else {
@@ -170,10 +228,14 @@ struct NewTripView: View {
 
     private var headerBar: some View {
         HStack {
-            Button(action: cancelView) {
+            Button(action: {
+                cancelView()
+            }) {
                 Text("Cancel")
                     .font(.system(size: 16, weight: .regular))
                     .foregroundColor(AppTheme.skyCyan)
+                    .contentShape(Rectangle())
+                    .frame(minWidth: 54, minHeight: 36, alignment: .leading)
             }
 
             Spacer()
@@ -188,6 +250,7 @@ struct NewTripView: View {
                 .font(.system(size: 16, weight: .regular))
                 .foregroundColor(.clear)
                 .accessibilityHidden(true)
+                .frame(minWidth: 54, minHeight: 36, alignment: .trailing)
         }
     }
 
@@ -240,7 +303,7 @@ struct NewTripView: View {
         }
         .padding(.horizontal, 20)
         .padding(.top, 12)
-        .padding(.bottom, 82)
+        .padding(.bottom, 24)
         .background(
             LinearGradient(
                 colors: [Color.clear, AppTheme.darkBackground.opacity(0.85), AppTheme.darkBackground],

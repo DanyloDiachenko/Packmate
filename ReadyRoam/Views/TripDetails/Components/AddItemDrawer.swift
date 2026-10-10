@@ -81,6 +81,10 @@ struct AddItemDrawer: View {
         .onAppear {
             viewModel.configureInitialSection(viewModel.selectedSection)
         }
+        .onDisappear {
+            isTitleFocused = false
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
     }
 
     private var drawerHeader: some View {
@@ -153,6 +157,14 @@ struct AddItemDrawer: View {
                 .focused($isTitleFocused)
                 .autocapitalization(.words)
                 .disableAutocorrection(false)
+                .submitLabel(.done)
+                .onSubmit {
+                    if viewModel.isFormValid {
+                        isTitleFocused = false
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        viewModel.handleSubmit(dismiss: { dismiss() })
+                    }
+                }
                 .onChange(of: viewModel.itemTitle) { _ in
                     if viewModel.errorMessage != nil {
                         withAnimation(.easeInOut(duration: 0.2)) {
@@ -373,6 +385,8 @@ struct AddItemDrawer: View {
 
     private var submitButton: some View {
         Button(action: {
+            isTitleFocused = false
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
             viewModel.handleSubmit(dismiss: { dismiss() })
         }) {
             HStack(spacing: 7) {

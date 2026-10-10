@@ -85,21 +85,40 @@ struct MainTabView: View {
                     bottomTabBar
                 }
             }
-        }
-        .sheet(item: $router.presentedSheet) { sheet in
-            switch sheet {
-            case .newTrip:
-                NewTripView(
-                    onTripCreated: { _ in
-                        router.dismissSheet()
-                        NotificationCenter.default.post(name: .didCreateNewTrip, object: nil)
+
+            DrawerOverlayMask(
+                isShowing: router.isShowingNewTripDrawer,
+                onTap: {
+                    router.dismissNewTripDrawer()
+                }
+            )
+
+            GeometryReader { geometry in
+                SlidingDrawerContainer(
+                    isShowing: router.isShowingNewTripDrawer,
+                    height: geometry.size.height * 0.88,
+                    dragOffset: $router.newTripDragOffset,
+                    onDismiss: {
+                        router.dismissNewTripDrawer()
                     },
-                    onCancel: {
-                        router.dismissSheet()
+                    onDragReset: {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            router.newTripDragOffset = 0
+                        }
                     }
-                )
-            case .editProfile, .addItem:
-                EmptyView()
+                ) {
+                    NewTripView(
+                        onTripCreated: { _ in
+                            router.dismissNewTripDrawer()
+                            NotificationCenter.default.post(name: .didCreateNewTrip, object: nil)
+                        },
+                        onCancel: {
+                            router.dismissNewTripDrawer()
+                        },
+                        dragOffset: $router.newTripDragOffset
+                    )
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             }
         }
         .ignoresSafeArea(.keyboard)
@@ -108,7 +127,7 @@ struct MainTabView: View {
 
     private var newTripButton: some View {
         Button(action: {
-            router.present(.newTrip)
+            router.presentNewTripDrawer()
         }) {
             ZStack {
                 Circle()

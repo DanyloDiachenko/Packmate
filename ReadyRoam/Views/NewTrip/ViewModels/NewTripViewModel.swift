@@ -100,17 +100,19 @@ final class NewTripViewModel: ObservableObject {
     func loadInitialData() async {
         await fetchDestinations(query: destinationText)
 
-        if existingTrips.isEmpty {
-            do {
-                let response = try await tripService.fetchTrips(limit: 50, offset: 0, isArchived: nil)
-                guard !Task.isCancelled else { return }
-                self.fetchedTrips = response.trips.map { Trip(from: $0) }
-            } catch {
-                print("Failed to fetch existing trips for calendar blocking: \(error)")
-            }
+        do {
+            let response = try await tripService.fetchTrips(limit: 50, offset: 0, isArchived: nil)
+            guard !Task.isCancelled else { return }
+            self.fetchedTrips = response.trips.map { Trip(from: $0) }
+        } catch {
+            print("Failed to fetch existing trips for calendar blocking: \(error)")
         }
 
         setupInitialDates()
+    }
+
+    func removeTrip(id: UUID) {
+        fetchedTrips.removeAll { $0.id == id }
     }
 
     func fetchDestinations(query: String) async {
@@ -184,7 +186,7 @@ final class NewTripViewModel: ObservableObject {
             dateSelection.returnDate = ret
         } else {
             let defaultDep = cal.date(byAdding: .day, value: 7, to: today) ?? today
-            let defaultRet = cal.date(byAdding: .day, value: 13, to: today) ?? today
+            let defaultRet = cal.date(byAdding: .day, value: 12, to: defaultDep) ?? today
             dateSelection.departDate = defaultDep
             dateSelection.returnDate = defaultRet
         }
@@ -258,6 +260,8 @@ final class NewTripViewModel: ObservableObject {
             )
 
             await MainActor.run {
+                self.fetchedTrips.append(tripToEmit)
+                resetState()
                 onSuccess(tripToEmit)
             }
         } catch {
@@ -266,5 +270,22 @@ final class NewTripViewModel: ObservableObject {
                 showingErrorAlert = true
             }
         }
+    }
+
+    func resetState() {
+        destinationText = ""
+        selectedFlag = "🇪🇸"
+        isSearchActive = false
+        searchResults = []
+        isLoadingDestinations = false
+        destinationSearchState = .idle
+        selectedDestination = nil
+        isSelectingDestination = false
+        isCreatingTrip = false
+        dateSelection = TripDateSelection()
+        selectedTripTypes = []
+        showingErrorAlert = false
+        errorMessage = nil
+        setupInitialDates()
     }
 }
