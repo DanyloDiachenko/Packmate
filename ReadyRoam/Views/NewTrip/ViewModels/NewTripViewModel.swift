@@ -1,0 +1,265 @@
+import Foundation
+import SwiftUI
+
+@MainActor
+final class NewTripViewModel: ObservableObject {
+    @Published var destinationText: String = ""
+    @Published var selectedFlag: String = "🇪🇸"
+    @Published var isSearchActive: Bool = false
+    @Published var searchResults: [DestinationDto] = []
+    @Published var isLoadingDestinations: Bool = false
+    @Published var selectedDestination: DestinationDto? = nil
+    @Published var isSelectingDestination: Bool = false
+    @Published var isCreatingTrip: Bool = false
+
+    @Published var dateSelection = TripDateSelection()
+    @Published var selectedTripTypes: Set<NewTripType> = []
+    @Published var fetchedTrips: [Trip] = []
+
+    @Published var showingErrorAlert: Bool = false
+    @Published var errorMessage: String? = nil
+
+    let existingTrips: [Trip]
+    private let tripService: any TripServiceProtocol
+    private let tripItemService: any TripItemServiceProtocol
+    private let destinationService: any DestinationServiceProtocol
+
+    private var currentSearchQueryToken: String = ""
+
+    private static let isoDateFormatter: DateFormatter = {
+        let fmt = DateFormatter()
+        fmt.locale = Locale(identifier: "en_US_POSIX")
+        fmt.dateFormat = "yyyy-MM-dd"
+        return fmt
+    }()
+
+    private static let shortDateFormatter: DateFormatter = {
+        let fmt = DateFormatter()
+        fmt.locale = Locale(identifier: "en_US_POSIX")
+        fmt.dateFormat = "MMM d"
+        return fmt
+    }()
+
+    init(
+        existingTrips: [Trip] = [],
+        tripService: (any TripServiceProtocol)? = nil,
+        tripItemService: (any TripItemServiceProtocol)? = nil,
+        destinationService: (any DestinationServiceProtocol)? = nil
+    ) {
+        self.existingTrips = existingTrips
+        self.tripService = tripService ?? TripService.shared
+        self.tripItemService = tripItemService ?? TripItemService.shared
+        self.destinationService = destinationService ?? DestinationService.shared
+    }
+
+    var allTrips: [Trip] {
+        existingTrips.isEmpty ? fetchedTrips : existingTrips
+    }
+
+    var blockedDates: Set<Date> {
+        let cal = Calendar.current
+        var set = Set<Date>()
+        for trip in allTrips {
+            guard let d = trip.departDate, let r = trip.returnDate else { continue }
+            var curr = cal.startOfDay(for: d)
+            let end = cal.startOfDay(for: r)
+            while curr <= end {
+                set.insert(curr)
+                guard let next = cal.date(byAdding: .day, value: 1, to: curr) else { break }
+                curr = next
+            }
+        }
+        return set
+    }
+
+    var isFormValid: Bool {
+        guard selectedDestination != nil else { return false }
+        guard let dep = dateSelection.departDate, let ret = dateSelection.returnDate else { return false }
+        return ret >= dep && isDateRangeAvailable(from: dep, to: ret)
+    }
+
+    func isDateRangeAvailable(from departure: Date, to returnDate: Date) -> Bool {
+        let cal = Calendar.current
+        let start = cal.startOfDay(for: departure)
+        let end = cal.startOfDay(for: returnDate)
+        guard end >= start else { return false }
+
+        let blocked = blockedDates
+        var curr = start
+        while curr <= end {
+            if blocked.contains(curr) {
+                return false
+            }
+            guard let next = cal.date(byAdding: .day, value: 1, to: curr) else { return false }
+            curr = next
+        }
+        return true
+    }
+
+    func loadInitialData() async {
+        await fetchDestinations(query: destinationText)
+
+        if existingTrips.isEmpty {
+            do {
+                let response = try await tripService.fetchTrips(limit: 50, offset: 0, isArchived: nil)
+                guard !Task.isCancelled else { return }
+                self.fetchedTrips = response.trips.map { Trip(from: $0) }
+            } catch {
+                print("Failed to fetch existing trips for calendar blocking: \(error)")
+            }
+        }
+
+        setupInitialDates()
+    }
+
+    func fetchDestinations(query: String) async {
+        let queryToken = query
+        currentSearchQueryToken = queryToken
+        isLoadingDestinations = true
+        defer {
+            if currentSearchQueryToken == queryToken {
+                isLoadingDestinations = false
+            }
+        }
+
+        do {
+            let results = try await destinationService.searchDestinations(query: queryToken)
+            guard !Task.isCancelled, currentSearchQueryToken == queryToken else { return }
+            self.searchResults = results
+        } catch {
+            guard !Task.isCancelled, currentSearchQueryToken == queryToken else { return }
+            print("Failed to search destinations: \(error)")
+            self.searchResults = []
+        }
+    }
+
+    func selectDestination(_ item: DestinationDto) {
+        isSelectingDestination = true
+        selectedDestination = item
+        destinationText = "\(item.city), \(item.country)"
+        selectedFlag = item.countryFlag
+        isSearchActive = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            self.isSelectingDestination = false
+        }
+    }
+
+    func setupInitialDates() {
+        guard dateSelection.departDate == nil else { return }
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let blocked = blockedDates
+
+        var foundDepart: Date? = nil
+        var foundReturn: Date? = nil
+
+        for offset in 1...60 {
+            if let candidateDepart = cal.date(byAdding: .day, value: offset, to: today),
+               !blocked.contains(candidateDepart) {
+                var validRange = true
+                for dayOffset in 0...5 {
+                    if let day = cal.date(byAdding: .day, value: dayOffset, to: candidateDepart),
+                       blocked.contains(day) {
+                        validRange = false
+                        break
+                    }
+                }
+                if validRange {
+                    foundDepart = candidateDepart
+                    foundReturn = cal.date(byAdding: .day, value: 5, to: candidateDepart)
+                    break
+                }
+            }
+        }
+
+        if let dep = foundDepart, let ret = foundReturn {
+            dateSelection.departDate = dep
+            dateSelection.returnDate = ret
+        } else {
+            let defaultDep = cal.date(byAdding: .day, value: 7, to: today) ?? today
+            let defaultRet = cal.date(byAdding: .day, value: 13, to: today) ?? today
+            dateSelection.departDate = defaultDep
+            dateSelection.returnDate = defaultRet
+        }
+    }
+
+    func handleDateTap(date: Date) {
+        let cal = Calendar.current
+        let target = cal.startOfDay(for: date)
+
+        if dateSelection.departDate == nil || (dateSelection.departDate != nil && dateSelection.returnDate != nil) {
+            dateSelection.departDate = target
+            dateSelection.returnDate = nil
+        } else if let dep = dateSelection.departDate {
+            if target < dep {
+                dateSelection.departDate = target
+                dateSelection.returnDate = nil
+            } else if cal.isDate(target, inSameDayAs: dep) {
+                dateSelection.returnDate = nil
+            } else {
+                let rangeAvailable = isDateRangeAvailable(from: dep, to: target)
+                if rangeAvailable {
+                    dateSelection.returnDate = target
+                } else {
+                    dateSelection.departDate = target
+                    dateSelection.returnDate = nil
+                }
+            }
+        }
+    }
+
+    func handleCreateTrip(onSuccess: @escaping (Trip) -> Void) async {
+        guard isFormValid && !isCreatingTrip, let selected = selectedDestination else { return }
+        isCreatingTrip = true
+        defer { isCreatingTrip = false }
+
+        let cityName = selected.city
+        let countryName = selected.country
+        let cal = Calendar.current
+        let dep = dateSelection.departDate ?? Date()
+        let ret = dateSelection.returnDate ?? cal.date(byAdding: .day, value: 6, to: dep)!
+
+        let nights = max(1, cal.dateComponents([.day], from: dep, to: ret).day ?? 1)
+        let flag = selected.countryFlag
+        let selectedTags = selectedTripTypes.map { $0.tagKey }
+        let banner = selected.bannerImage
+
+        let isoFmt = Self.isoDateFormatter
+        let departDateStr = isoFmt.string(from: dep)
+        let returnDateStr = isoFmt.string(from: ret)
+
+        let destDto = TripDestinationDto(
+            country: countryName,
+            countryFlag: flag,
+            city: cityName,
+            bannerImage: banner
+        )
+        let reqDto = CreateTripRequestDto(
+            destination: destDto,
+            departDate: departDateStr,
+            returnDate: returnDateStr,
+            tags: selectedTags
+        )
+
+        do {
+            let createdDto = try await tripService.createTrip(request: reqDto)
+            await tripItemService.seedDefaultItems(for: createdDto.id)
+
+            let tripToEmit = Trip(
+                from: createdDto,
+                packedItems: 0,
+                totalItems: TripItemService.defaultItemsForNewTrip.count
+            )
+
+            await MainActor.run {
+                onSuccess(tripToEmit)
+            }
+        } catch {
+            print("Failed to create trip on server: \(error)")
+            await MainActor.run {
+                errorMessage = error.localizedDescription
+                showingErrorAlert = true
+            }
+        }
+    }
+}

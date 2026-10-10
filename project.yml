@@ -1,6 +1,6 @@
-name: Packmate
+name: ReadyRoam
 options:
-  bundleIdPrefix: com.packmate
+  bundleIdPrefix: com.readyroam
   deploymentTarget:
     iOS: "16.0"
   generateEmptyDirectories: true
@@ -10,22 +10,28 @@ settings:
     SWIFT_VERSION: "5.0"
 
 targets:
-  Packmate:
+  ReadyRoam:
     type: application
     platform: iOS
     deploymentTarget: "16.0"
     sources:
-      - path: Packmate
+      - path: ReadyRoam
     settings:
       base:
-        PRODUCT_NAME: Packmate
-        PRODUCT_BUNDLE_IDENTIFIER: com.packmate.Packmate
+        PRODUCT_NAME: ReadyRoam
+        PRODUCT_BUNDLE_IDENTIFIER: com.readyroam.ReadyRoam
+        DEVELOPMENT_TEAM: F29H95HAC3
+        CODE_SIGN_STYLE: Automatic
         GENERATE_INFOPLIST_FILE: YES
         CURRENT_PROJECT_VERSION: 1
         MARKETING_VERSION: "1.0.0"
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
-        INFOPLIST_KEY_CFBundleDisplayName: Packmate
+        INFOPLIST_KEY_CFBundleDisplayName: ReadyRoam
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsArbitraryLoads: YES
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: "ReadyRoam connects to your local development backend server."
         ENABLE_PREVIEWS: YES
+        SUPPORTED_PLATFORMS: "iphoneos iphonesimulator"
+        TARGETED_DEVICE_FAMILY: 1
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
