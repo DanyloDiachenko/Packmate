@@ -30,6 +30,7 @@ class TripDetailsViewModel: ObservableObject {
     @Published var liveWeatherToday: String? = nil
     @Published var liveCurrentSeason: String? = nil
     @Published var isLoadingWeather: Bool = true
+    @Published var weatherErrorMessage: String? = nil
 
     @Published var categories: [ChecklistCategory] = ChecklistCategory.defaultEmptyCategories()
     @Published var expandedCategoryIds: Set<UUID> = []

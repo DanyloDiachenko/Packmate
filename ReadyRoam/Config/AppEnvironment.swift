@@ -9,8 +9,14 @@ public enum AppEnvironment: String, CaseIterable, Identifiable, Codable {
     public var defaultBaseURL: URL {
         switch self {
         case .development:
+            if let customDev = Env.get("BACKEND_DEV_URL") ?? Env.get("API_BASE_URL"), let url = URL(string: customDev) {
+                return url
+            }
             return URL(string: "http://192.168.0.102:5050")!
         case .production:
+            if let customProd = Env.get("BACKEND_PROD_URL"), let url = URL(string: customProd) {
+                return url
+            }
             return URL(string: "https://api.readyroam.app")!
         }
     }
@@ -52,12 +58,19 @@ public final class AppConfig: ObservableObject {
         self.activeEnvironment = env
 
         let savedCustomURL = UserDefaults.standard.string(forKey: "readyroam_backend_base_url") ?? UserDefaults.standard.string(forKey: "packmate_backend_base_url") ?? ""
-        self.customBaseURLString = savedCustomURL
+        if savedCustomURL.isEmpty, let envBase = Env.get("API_BASE_URL") ?? Env.get("BACKEND_BASE_URL"), !envBase.isEmpty {
+            self.customBaseURLString = envBase
+        } else {
+            self.customBaseURLString = savedCustomURL
+        }
     }
 
     public var baseURL: URL {
         let trimmed = customBaseURLString.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty, let url = URL(string: trimmed) {
+            return url
+        }
+        if let envBase = Env.get("API_BASE_URL") ?? Env.get("BACKEND_BASE_URL"), let url = URL(string: envBase) {
             return url
         }
         return activeEnvironment.defaultBaseURL

@@ -69,7 +69,9 @@ extension TripDetailsViewModel {
                 self.liveCurrentSeason = dto.currentSeason
             }
         } catch {
-            print("Failed to fetch live weather: \(error)")
+            await MainActor.run {
+                self.weatherErrorMessage = error.localizedDescription
+            }
         }
     }
 }

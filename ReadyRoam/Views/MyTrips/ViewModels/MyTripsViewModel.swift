@@ -14,7 +14,8 @@ final class MyTripsViewModel: ObservableObject {
 
     private let tripService: any TripServiceProtocol
     private let tripItemService: any TripItemServiceProtocol
-    private let pageSize = 10
+    private let initialPageSize = 4
+    private let loadMorePageSize = 3
 
     var activeTrip: Trip? {
         trips.first
@@ -55,7 +56,8 @@ final class MyTripsViewModel: ObservableObject {
         }
 
         do {
-            let response = try await tripService.fetchTrips(limit: pageSize, offset: 0, isArchived: false)
+            let fetchLimit = max(initialPageSize, trips.count)
+            let response = try await tripService.fetchTrips(limit: fetchLimit, offset: 0, isArchived: false)
             guard !Task.isCancelled else { return }
             let loadedTrips = response.trips.map { Trip(from: $0) }
             self.trips = loadedTrips
@@ -82,7 +84,7 @@ final class MyTripsViewModel: ObservableObject {
 
         do {
             let offset = trips.count
-            let response = try await tripService.fetchTrips(limit: 5, offset: offset, isArchived: false)
+            let response = try await tripService.fetchTrips(limit: loadMorePageSize, offset: offset, isArchived: false)
             guard !Task.isCancelled else { return }
             let newTrips = response.trips.map { Trip(from: $0) }
             self.totalItems = response.totalItems
@@ -91,7 +93,8 @@ final class MyTripsViewModel: ObservableObject {
             let uniqueTrips = newTrips.filter { !existingIDs.contains($0.id) }
             self.trips.append(contentsOf: uniqueTrips)
         } catch {
-            print("Failed to load more trips: \(error)")
+            guard !Task.isCancelled else { return }
+            self.refreshErrorMessage = error.localizedDescription
         }
     }
 
@@ -108,7 +111,8 @@ final class MyTripsViewModel: ObservableObject {
                 trips[index].totalItems = totalCount
             }
         } catch {
-            print("Failed to refresh trip progress: \(error)")
+            guard !Task.isCancelled else { return }
+            self.refreshErrorMessage = error.localizedDescription
         }
     }
 

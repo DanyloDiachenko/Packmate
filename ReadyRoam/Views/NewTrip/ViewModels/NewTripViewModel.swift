@@ -106,7 +106,9 @@ final class NewTripViewModel: ObservableObject {
                 guard !Task.isCancelled else { return }
                 self.fetchedTrips = response.trips.map { Trip(from: $0) }
             } catch {
-                print("Failed to fetch existing trips for calendar blocking: \(error)")
+                guard !Task.isCancelled else { return }
+                self.errorMessage = error.localizedDescription
+                self.showingErrorAlert = true
             }
         }
 
