@@ -40,7 +40,6 @@ extension TripDetailsViewModel {
                 }
             }
         } catch {
-            print("Failed to fetch trip items: \(error)")
             await MainActor.run {
                 self.itemErrorMessage = error.localizedDescription
                 self.showingErrorAlert = true
@@ -84,7 +83,6 @@ extension TripDetailsViewModel {
                     request: UpdateTripItemRequest(isTaken: item.isPacked)
                 )
             } catch {
-                print("Failed to update trip item: \(error)")
                 await MainActor.run {
                     self.itemErrorMessage = error.localizedDescription
                     self.showingErrorAlert = true
@@ -110,7 +108,6 @@ extension TripDetailsViewModel {
             do {
                 try await tripItemService.deleteTripItem(id: item.id)
             } catch {
-                print("Failed to delete trip item on server: \(error)")
                 await MainActor.run {
                     withAnimation {
                         self.categories = previousCategories

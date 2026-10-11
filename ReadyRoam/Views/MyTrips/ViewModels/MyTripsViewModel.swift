@@ -93,7 +93,8 @@ final class MyTripsViewModel: ObservableObject {
             let uniqueTrips = newTrips.filter { !existingIDs.contains($0.id) }
             self.trips.append(contentsOf: uniqueTrips)
         } catch {
-            print("Failed to load more trips: \(error)")
+            guard !Task.isCancelled else { return }
+            self.refreshErrorMessage = error.localizedDescription
         }
     }
 
@@ -110,7 +111,8 @@ final class MyTripsViewModel: ObservableObject {
                 trips[index].totalItems = totalCount
             }
         } catch {
-            print("Failed to refresh trip progress: \(error)")
+            guard !Task.isCancelled else { return }
+            self.refreshErrorMessage = error.localizedDescription
         }
     }
 

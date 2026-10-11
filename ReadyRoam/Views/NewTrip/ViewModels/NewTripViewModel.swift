@@ -100,12 +100,16 @@ final class NewTripViewModel: ObservableObject {
     func loadInitialData() async {
         await fetchDestinations(query: destinationText)
 
-        do {
-            let response = try await tripService.fetchTrips(limit: 50, offset: 0, isArchived: nil)
-            guard !Task.isCancelled else { return }
-            self.fetchedTrips = response.trips.map { Trip(from: $0) }
-        } catch {
-            print("Failed to fetch existing trips for calendar blocking: \(error)")
+        if existingTrips.isEmpty {
+            do {
+                let response = try await tripService.fetchTrips(limit: 50, offset: 0, isArchived: nil)
+                guard !Task.isCancelled else { return }
+                self.fetchedTrips = response.trips.map { Trip(from: $0) }
+            } catch {
+                guard !Task.isCancelled else { return }
+                self.errorMessage = error.localizedDescription
+                self.showingErrorAlert = true
+            }
         }
 
         setupInitialDates()

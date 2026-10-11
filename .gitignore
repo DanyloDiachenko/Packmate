@@ -19,3 +19,7 @@ build/
 # IDE / Editor
 .vscode/
 
+# Environment / Secrets
+.env
+*.env
+!.env.example

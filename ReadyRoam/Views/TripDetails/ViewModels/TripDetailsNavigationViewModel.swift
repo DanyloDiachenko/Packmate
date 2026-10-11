@@ -19,7 +19,6 @@ extension TripDetailsViewModel {
                 dismiss()
             }
         } catch {
-            print("Failed to delete trip from backend: \(error)")
             await MainActor.run {
                 itemErrorMessage = error.localizedDescription
                 showingErrorAlert = true
