@@ -26,10 +26,16 @@ final class TripService: TripServiceProtocol, ObservableObject {
         return try await networkClient.request(endpoint)
     }
 
-    func createTrip(request dto: CreateTripRequestDto) async throws -> TripResponseDto {
+    func createTrip(request dto: CreateTripRequestDto, presetId: UUID? = nil) async throws -> TripResponseDto {
         let bodyData = try JSONEncoder().encode(dto)
+        let path: String
+        if let presetId = presetId {
+            path = "trips/\(presetId.uuidString.lowercased())"
+        } else {
+            path = "trips"
+        }
         let endpoint = Endpoint(
-            path: "trips",
+            path: path,
             method: .post,
             body: bodyData,
             requiresAuth: true

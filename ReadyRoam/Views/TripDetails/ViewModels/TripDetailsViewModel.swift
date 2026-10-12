@@ -5,6 +5,7 @@ enum ActiveDrawer: Equatable {
     case none
     case aiSuggestions
     case addItem
+    case aiCopilot
 }
 
 @MainActor
@@ -40,6 +41,7 @@ class TripDetailsViewModel: ObservableObject {
     @Published var selectedInitialSection: ChecklistSection = .clothesAndFootwear
     @Published var dragOffset: CGFloat = 0
     @Published var addItemDragOffset: CGFloat = 0
+    @Published var aiCopilotDragOffset: CGFloat = 0
     @Published var swipedItemId: UUID? = nil
     @Published var isLoadingItems: Bool = false
     @Published var hasLoadedItems: Bool = false
@@ -54,6 +56,10 @@ class TripDetailsViewModel: ObservableObject {
 
     var showingAddItemDrawer: Bool {
         activeDrawer == .addItem
+    }
+
+    var showingAICopilotDrawer: Bool {
+        activeDrawer == .aiCopilot
     }
 
     var isAnyDrawerOpen: Bool {

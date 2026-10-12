@@ -8,10 +8,14 @@ struct SettingsView: View {
 
     @State private var showingLogoutDialog = false
     @State private var showingEditProfile = false
+    @State private var showingPresetsList = false
+    @State private var presetsCount: Int? = nil
     @State private var editFirstName = ""
     @State private var editLastName = ""
     @State private var isSavingProfile = false
     @State private var profileErrorMessage: String? = nil
+
+    private let presetService: any PresetServiceProtocol = AppContainer.shared.presetService
 
     var body: some View {
         ZStack {
@@ -24,6 +28,8 @@ struct SettingsView: View {
                         .padding(.top, 8)
 
                     profileCard
+
+                    presetsSection
 
                     aboutSection
 
@@ -38,6 +44,17 @@ struct SettingsView: View {
         .simultaneousGesture(backSwipeGesture)
         .sheet(isPresented: $showingEditProfile) {
             editProfileSheet
+        }
+        .sheet(isPresented: $showingPresetsList) {
+            PresetsListView()
+                .onDisappear {
+                    Task {
+                        await loadPresetsCount()
+                    }
+                }
+        }
+        .task {
+            await loadPresetsCount()
         }
     }
 
@@ -332,10 +349,35 @@ struct SettingsView: View {
             .padding(.leading, 56)
     }
 
+    private var presetsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionTitle("PACKING PRESETS")
+
+            settingRow(
+                icon: "slider.horizontal.3",
+                iconColor: AppTheme.skyCyan,
+                title: "Manage Presets",
+                badgeText: presetsCount != nil ? "\(presetsCount!)" : nil,
+                action: {
+                    showingPresetsList = true
+                }
+            )
+            .background(cardBackground)
+        }
+    }
+
+    private func loadPresetsCount() async {
+        do {
+            let list = try await presetService.fetchPresets()
+            self.presetsCount = list.count
+        } catch {}
+    }
+
     private func settingRow(
         icon: String,
         iconColor: Color,
         title: String,
+        badgeText: String? = nil,
         action: (() -> Void)? = nil
     ) -> some View {
         Button(action: { action?() }) {
@@ -355,6 +397,16 @@ struct SettingsView: View {
                     .foregroundColor(AppTheme.textPrimary)
 
                 Spacer()
+
+                if let badge = badgeText {
+                    Text(badge)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(AppTheme.skyCyan)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(AppTheme.skyCyan.opacity(0.14))
+                        .clipShape(Capsule())
+                }
 
                 if action != nil {
                     Image(systemName: "chevron.right")

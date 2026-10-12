@@ -69,9 +69,37 @@ final class AIService: AIServiceProtocol, ObservableObject {
             path: "ai/recommendations",
             method: .post,
             body: bodyData,
-            requiresAuth: true
+            requiresAuth: true,
+            timeoutInterval: 60
         )
 
+        return try await networkClient.request(endpoint)
+    }
+
+    func generateTrip(message: String, skeleton: TripSkeletonDto? = nil) async throws -> TripGeneratorResponse {
+        let requestObj = TripGeneratorRequest(message: message, skeleton: skeleton)
+        let bodyData = try JSONEncoder().encode(requestObj)
+
+        let endpoint = Endpoint(
+            path: "ai/trip-generator",
+            method: .post,
+            body: bodyData,
+            requiresAuth: true,
+            timeoutInterval: 60
+        )
+
+        return try await networkClient.request(endpoint)
+    }
+
+    func refinePackingWithCopilot(request: AIPackingCopilotRequest) async throws -> AIPackingCopilotResponse {
+        let bodyData = try JSONEncoder().encode(request)
+        let endpoint = Endpoint(
+            path: "ai/packing-copilot",
+            method: .post,
+            body: bodyData,
+            requiresAuth: true,
+            timeoutInterval: 60
+        )
         return try await networkClient.request(endpoint)
     }
 }

@@ -61,25 +61,11 @@ final class TripItemService: TripItemServiceProtocol, ObservableObject {
         try await networkClient.requestVoid(endpoint)
     }
 
-    static let defaultItemsForNewTrip: [CreateTripItemRequest] = [
-        CreateTripItemRequest(section: "Essentials & Documents", title: "Passport / ID", quantity: 1, tag: "Essential"),
-        CreateTripItemRequest(section: "Essentials & Documents", title: "Boarding Pass & Tickets", quantity: 1, tag: "Essential"),
-        CreateTripItemRequest(section: "Essentials & Documents", title: "Credit Cards & Cash", quantity: 1, tag: "Essential"),
-        CreateTripItemRequest(section: "Clothes & Footwear", title: "T-Shirts / Tops", quantity: 4, tag: "Important"),
-        CreateTripItemRequest(section: "Clothes & Footwear", title: "Pants / Jeans", quantity: 2, tag: "Important"),
-        CreateTripItemRequest(section: "Clothes & Footwear", title: "Underwear & Socks", quantity: 5, tag: "Essential"),
-        CreateTripItemRequest(section: "Clothes & Footwear", title: "Comfortable Walking Shoes", quantity: 1, tag: "Important"),
-        CreateTripItemRequest(section: "Electronics & Tech", title: "Smartphone", quantity: 1, tag: "Important"),
-        CreateTripItemRequest(section: "Electronics & Tech", title: "Phone Charger", quantity: 1, tag: "Important"),
-        CreateTripItemRequest(section: "Electronics & Tech", title: "Power Bank", quantity: 1, tag: "Important"),
-        CreateTripItemRequest(section: "Electronics & Tech", title: "Travel Adapter", quantity: 1, tag: "Important"),
-        CreateTripItemRequest(section: "Toiletries & Health", title: "Toothbrush & Toothpaste", quantity: 1, tag: "Essential"),
-        CreateTripItemRequest(section: "Toiletries & Health", title: "Personal Medications & First Aid", quantity: 1, tag: "Safety"),
-        CreateTripItemRequest(section: "Toiletries & Health", title: "Shampoo & Body Wash", quantity: 1, tag: "Optional"),
-        CreateTripItemRequest(section: "Misc & Gear", title: "Reusable Water Bottle", quantity: 1, tag: "Optional"),
-        CreateTripItemRequest(section: "Misc & Gear", title: "Sunglasses", quantity: 1, tag: "Optional"),
-        CreateTripItemRequest(section: "Misc & Gear", title: "Daypack / Backpack", quantity: 1, tag: "Important")
-    ]
+    static var defaultItemsForNewTrip: [CreateTripItemRequest] {
+        PresetItemDto.defaultItems.map {
+            CreateTripItemRequest(section: $0.section, title: $0.title, quantity: $0.quantity, tag: $0.tag)
+        }
+    }
 
     func seedDefaultItems(for tripId: UUID) async throws {
         let items = Self.defaultItemsForNewTrip

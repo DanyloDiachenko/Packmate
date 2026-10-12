@@ -19,11 +19,15 @@ final class NewTripViewModel: ObservableObject {
 
     @Published var showingErrorAlert: Bool = false
     @Published var errorMessage: String? = nil
+    @Published var availablePresets: [PresetSummaryDto] = []
+    @Published var selectedPreset: PresetSummaryDto? = nil
+    @Published var isLoadingPresets: Bool = false
 
     let existingTrips: [Trip]
     private let tripService: any TripServiceProtocol
     private let tripItemService: any TripItemServiceProtocol
     private let destinationService: any DestinationServiceProtocol
+    private let presetService: any PresetServiceProtocol
 
     private var currentSearchQueryToken: String = ""
 
@@ -45,23 +49,33 @@ final class NewTripViewModel: ObservableObject {
         existingTrips: [Trip] = [],
         tripService: any TripServiceProtocol,
         tripItemService: any TripItemServiceProtocol,
-        destinationService: any DestinationServiceProtocol
+        destinationService: any DestinationServiceProtocol,
+        presetService: (any PresetServiceProtocol)? = nil
     ) {
         self.existingTrips = existingTrips
         self.tripService = tripService
         self.tripItemService = tripItemService
         self.destinationService = destinationService
+        self.presetService = presetService ?? AppContainer.shared.presetService
     }
 
     var allTrips: [Trip] {
-        existingTrips.isEmpty ? fetchedTrips : existingTrips
+        if existingTrips.isEmpty {
+            return fetchedTrips
+        } else {
+            var combined = existingTrips
+            for t in fetchedTrips where !combined.contains(where: { $0.id == t.id }) {
+                combined.append(t)
+            }
+            return combined
+        }
     }
 
     var blockedDates: Set<Date> {
         let cal = Calendar.current
         var set = Set<Date>()
         for trip in allTrips {
-            guard let d = trip.departDate, let r = trip.returnDate else { continue }
+            guard !trip.isArchived, let d = trip.departDate, let r = trip.returnDate else { continue }
             var curr = cal.startOfDay(for: d)
             let end = cal.startOfDay(for: r)
             while curr <= end {
@@ -99,10 +113,11 @@ final class NewTripViewModel: ObservableObject {
 
     func loadInitialData() async {
         await fetchDestinations(query: destinationText)
+        await loadPresets()
 
         if existingTrips.isEmpty {
             do {
-                let response = try await tripService.fetchTrips(limit: 50, offset: 0, isArchived: nil)
+                let response = try await tripService.fetchTrips(limit: 50, offset: 0, isArchived: false)
                 guard !Task.isCancelled else { return }
                 self.fetchedTrips = response.trips.map { Trip(from: $0) }
             } catch {
@@ -115,8 +130,40 @@ final class NewTripViewModel: ObservableObject {
         setupInitialDates()
     }
 
+    func loadPresets() async {
+        isLoadingPresets = true
+        defer { isLoadingPresets = false }
+        do {
+            let presets = try await presetService.fetchPresets()
+            guard !Task.isCancelled else { return }
+            self.availablePresets = presets
+        } catch {
+            guard !Task.isCancelled else { return }
+            self.availablePresets = []
+        }
+    }
+
     func removeTrip(id: UUID) {
         fetchedTrips.removeAll { $0.id == id }
+        validateAndAdjustSelectedDates()
+    }
+
+    func addTrip(_ trip: Trip) {
+        if !fetchedTrips.contains(where: { $0.id == trip.id }) {
+            fetchedTrips.append(trip)
+        }
+        validateAndAdjustSelectedDates()
+    }
+
+    func refreshTrips() async {
+        do {
+            let response = try await tripService.fetchTrips(limit: 50, offset: 0, isArchived: false)
+            guard !Task.isCancelled else { return }
+            self.fetchedTrips = response.trips.map { Trip(from: $0) }
+            validateAndAdjustSelectedDates()
+        } catch {
+            guard !Task.isCancelled else { return }
+        }
     }
 
     func fetchDestinations(query: String) async {
@@ -157,8 +204,33 @@ final class NewTripViewModel: ObservableObject {
         }
     }
 
-    func setupInitialDates() {
-        guard dateSelection.departDate == nil else { return }
+    func validateAndAdjustSelectedDates() {
+        let blocked = blockedDates
+        var needsReset = false
+        if let dep = dateSelection.departDate {
+            if blocked.contains(dep) {
+                needsReset = true
+            }
+        }
+        if let ret = dateSelection.returnDate {
+            if blocked.contains(ret) {
+                needsReset = true
+            }
+        }
+        if let dep = dateSelection.departDate, let ret = dateSelection.returnDate {
+            if !isDateRangeAvailable(from: dep, to: ret) {
+                needsReset = true
+            }
+        }
+        if needsReset {
+            dateSelection.departDate = nil
+            dateSelection.returnDate = nil
+            setupInitialDates(forceReset: true)
+        }
+    }
+
+    func setupInitialDates(forceReset: Bool = false) {
+        if !forceReset && dateSelection.departDate != nil { return }
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
         let blocked = blockedDates
@@ -194,11 +266,21 @@ final class NewTripViewModel: ObservableObject {
             dateSelection.departDate = defaultDep
             dateSelection.returnDate = defaultRet
         }
+
+        if let dep = dateSelection.departDate {
+            let depMonth = cal.date(from: cal.dateComponents([.year, .month], from: dep)) ?? dep
+            if let idx = dateSelection.availableMonths.firstIndex(where: { cal.isDate($0, equalTo: depMonth, toGranularity: .month) }) {
+                dateSelection.viewingMonthIndex = idx
+            }
+        }
     }
 
     func handleDateTap(date: Date) {
         let cal = Calendar.current
         let target = cal.startOfDay(for: date)
+        if blockedDates.contains(target) {
+            return
+        }
 
         if dateSelection.departDate == nil || (dateSelection.departDate != nil && dateSelection.returnDate != nil) {
             dateSelection.departDate = target
@@ -254,17 +336,16 @@ final class NewTripViewModel: ObservableObject {
         )
 
         do {
-            let createdDto = try await tripService.createTrip(request: reqDto)
-            try? await tripItemService.seedDefaultItems(for: createdDto.id)
+            let createdDto = try await tripService.createTrip(request: reqDto, presetId: selectedPreset?.id)
 
             let tripToEmit = Trip(
                 from: createdDto,
                 packedItems: 0,
-                totalItems: TripItemService.defaultItemsForNewTrip.count
+                totalItems: selectedPreset?.totalItemsCount ?? 0
             )
 
             await MainActor.run {
-                self.fetchedTrips.append(tripToEmit)
+                self.addTrip(tripToEmit)
                 resetState()
                 onSuccess(tripToEmit)
             }
@@ -284,6 +365,7 @@ final class NewTripViewModel: ObservableObject {
         isLoadingDestinations = false
         destinationSearchState = .idle
         selectedDestination = nil
+        selectedPreset = nil
         isSelectingDestination = false
         isCreatingTrip = false
         dateSelection = TripDateSelection()

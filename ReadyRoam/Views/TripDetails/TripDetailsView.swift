@@ -6,6 +6,7 @@ struct TripDetailsView: View {
     @Binding var isViewingTripDetails: Bool
     @Binding var isShowingAIDrawer: Bool
     @StateObject private var viewModel: TripDetailsViewModel
+    @StateObject private var copilotViewModel = AIPackingCopilotViewModel()
 
     init(
         isViewingTripDetails: Binding<Bool> = .constant(false),
@@ -124,6 +125,11 @@ struct TripDetailsView: View {
                         } else {
                             categoryCardsList
 
+                            if !viewModel.isReadOnly && viewModel.tripId != nil {
+                                aiPackingCopilotButton
+                                    .padding(.top, 4)
+                            }
+
                             if viewModel.tripId != nil {
                                 deleteTripButton
                             }
@@ -216,6 +222,81 @@ struct TripDetailsView: View {
         }
     }
 
+    private var aiPackingCopilotButton: some View {
+        Button(action: {
+            viewModel.openAICopilotDrawer(isShowingAIDrawerBinding: $isShowingAIDrawer)
+        }) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(hex: "A855F7"), Color(hex: "6366F1")],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 38, height: 38)
+                        .shadow(color: Color(hex: "A855F7").opacity(0.4), radius: 6, x: 0, y: 2)
+
+                    Image(systemName: "wand.and.stars")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text("AI Packing Copilot")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundColor(.white)
+
+                        Text("Ask AI")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(Color(hex: "F5D0FE"))
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 2)
+                            .background(
+                                Capsule()
+                                    .fill(Color(hex: "3B185F").opacity(0.85))
+                                    .overlay(
+                                        Capsule()
+                                            .stroke(Color(hex: "C084FC").opacity(0.4), lineWidth: 1)
+                                    )
+                            )
+                    }
+
+                    Text("Refine, reduce or adapt items with AI instructions")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(Color(hex: "C084FC").opacity(0.85))
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(Color(hex: "C084FC"))
+            }
+            .padding(14)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color(hex: "171224").opacity(0.92))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [Color(hex: "A855F7").opacity(0.6), Color(hex: "6366F1").opacity(0.25)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1.2
+                            )
+                    )
+                    .shadow(color: Color(hex: "A855F7").opacity(0.12), radius: 10, x: 0, y: 3)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
     private var deleteTripButton: some View {
         Button(action: {
             viewModel.showingDeleteDialog = true
@@ -260,8 +341,9 @@ struct TripDetailsView: View {
     private var drawerContent: some View {
         GeometryReader { geometry in
             ZStack(alignment: .bottom) {
-                aiSuggestionsDrawerSection(height: geometry.size.height * 0.72)
-                addItemDrawerSection(height: geometry.size.height * 0.68)
+                aiSuggestionsDrawerSection(height: geometry.size.height * 0.65)
+                addItemDrawerSection(height: geometry.size.height * 0.65)
+                aiCopilotDrawerSection(height: geometry.size.height * 0.68)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         }
@@ -323,6 +405,28 @@ struct TripDetailsView: View {
                 onAddItem: { request in
                     return viewModel.handleAddItem(request: request)
                 },
+                onClose: {
+                    viewModel.closeDrawer(isShowingAIDrawerBinding: $isShowingAIDrawer)
+                }
+            )
+        }
+    }
+
+    private func aiCopilotDrawerSection(height: CGFloat) -> some View {
+        SlidingDrawerContainer(
+            isShowing: viewModel.showingAICopilotDrawer,
+            height: height,
+            dragOffset: $viewModel.aiCopilotDragOffset,
+            onDismiss: {
+                viewModel.closeDrawer(isShowingAIDrawerBinding: $isShowingAIDrawer)
+            },
+            onDragReset: {
+                viewModel.resetDrawerOffset()
+            }
+        ) {
+            AICopilotDrawer(
+                viewModel: copilotViewModel,
+                tripDetailsViewModel: viewModel,
                 onClose: {
                     viewModel.closeDrawer(isShowingAIDrawerBinding: $isShowingAIDrawer)
                 }

@@ -15,6 +15,7 @@ public struct Endpoint {
     public let queryItems: [URLQueryItem]?
     public let body: Data?
     public let requiresAuth: Bool
+    public let timeoutInterval: TimeInterval?
 
     public init(
         path: String,
@@ -22,7 +23,8 @@ public struct Endpoint {
         headers: [String: String]? = nil,
         queryItems: [URLQueryItem]? = nil,
         body: Data? = nil,
-        requiresAuth: Bool = true
+        requiresAuth: Bool = true,
+        timeoutInterval: TimeInterval? = nil
     ) {
         self.path = path
         self.method = method
@@ -30,6 +32,7 @@ public struct Endpoint {
         self.queryItems = queryItems
         self.body = body
         self.requiresAuth = requiresAuth
+        self.timeoutInterval = timeoutInterval
     }
 }
 
@@ -126,6 +129,10 @@ public final class URLSessionNetworkClient: NetworkClientProtocol, @unchecked Se
 
         if let body = endpoint.body {
             urlRequest.httpBody = body
+        }
+
+        if let timeout = endpoint.timeoutInterval {
+            urlRequest.timeoutInterval = timeout
         }
 
         return urlRequest

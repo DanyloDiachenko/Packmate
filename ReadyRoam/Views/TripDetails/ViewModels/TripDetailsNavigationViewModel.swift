@@ -40,6 +40,17 @@ extension TripDetailsViewModel {
             isShowingAIDrawerBinding.wrappedValue = true
             dragOffset = 0
             addItemDragOffset = 0
+            aiCopilotDragOffset = 0
+        }
+    }
+
+    func openAICopilotDrawer(isShowingAIDrawerBinding: Binding<Bool>) {
+        withAnimation(drawerAnimation) {
+            activeDrawer = .aiCopilot
+            isShowingAIDrawerBinding.wrappedValue = true
+            dragOffset = 0
+            addItemDragOffset = 0
+            aiCopilotDragOffset = 0
         }
     }
 
@@ -56,6 +67,7 @@ extension TripDetailsViewModel {
             isShowingAIDrawerBinding.wrappedValue = true
             addItemDragOffset = 0
             dragOffset = 0
+            aiCopilotDragOffset = 0
         }
     }
 
@@ -66,6 +78,7 @@ extension TripDetailsViewModel {
             isShowingAIDrawerBinding?.wrappedValue = false
             dragOffset = 0
             addItemDragOffset = 0
+            aiCopilotDragOffset = 0
         }
     }
 
@@ -81,6 +94,7 @@ extension TripDetailsViewModel {
         withAnimation(drawerAnimation) {
             dragOffset = 0
             addItemDragOffset = 0
+            aiCopilotDragOffset = 0
         }
     }
 }

@@ -25,11 +25,17 @@ protocol AuthServiceProtocol: ObservableObject {
 @MainActor
 protocol TripServiceProtocol: ObservableObject {
     func fetchTrips(limit: Int, offset: Int, isArchived: Bool?) async throws -> PaginatedTripsResponseDto
-    func createTrip(request dto: CreateTripRequestDto) async throws -> TripResponseDto
+    func createTrip(request dto: CreateTripRequestDto, presetId: UUID?) async throws -> TripResponseDto
     func archiveTrip(id: UUID) async throws -> TripResponseDto
     func unarchiveTrip(id: UUID) async throws -> TripResponseDto
     func deleteTrip(id: UUID) async throws
     func updateTrip(id: UUID, request dto: UpdateTripRequestDto) async throws -> TripResponseDto
+}
+
+extension TripServiceProtocol {
+    func createTrip(request dto: CreateTripRequestDto) async throws -> TripResponseDto {
+        try await createTrip(request: dto, presetId: nil)
+    }
 }
 
 @MainActor
@@ -59,4 +65,21 @@ protocol WeatherServiceProtocol: ObservableObject {
 protocol AIServiceProtocol: ObservableObject {
     func fetchPackingSuggestions(cityName: String, country: String, season: String, temperature: String, tripDays: Int, tripType: String, existingItems: [String]) async throws -> [AISuggestion]
     func fetchRecommendations(city: String, country: String, tripDays: Int, tripType: String, weatherSummary: String?, currentSeason: String?, existingItems: [String]) async throws -> AIRecommendationResponse
+    func generateTrip(message: String, skeleton: TripSkeletonDto?) async throws -> TripGeneratorResponse
+    func refinePackingWithCopilot(request: AIPackingCopilotRequest) async throws -> AIPackingCopilotResponse
+}
+
+extension AIServiceProtocol {
+    func generateTrip(message: String) async throws -> TripGeneratorResponse {
+        try await generateTrip(message: message, skeleton: nil)
+    }
+}
+
+@MainActor
+protocol PresetServiceProtocol: ObservableObject {
+    func fetchPresets() async throws -> [PresetSummaryDto]
+    func fetchPreset(id: UUID) async throws -> PresetDto
+    func createPreset(request: CreatePresetRequest) async throws -> PresetDto
+    func updatePreset(id: UUID, request: UpdatePresetRequest) async throws -> PresetDto
+    func deletePreset(id: UUID) async throws
 }

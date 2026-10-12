@@ -108,9 +108,9 @@ struct MainTabView: View {
                     }
                 ) {
                     NewTripView(
-                        onTripCreated: { _ in
+                        onTripCreated: { createdTrip in
                             router.dismissNewTripDrawer()
-                            NotificationCenter.default.post(name: .didCreateNewTrip, object: nil)
+                            NotificationCenter.default.post(name: .didCreateNewTrip, object: createdTrip)
                         },
                         onCancel: {
                             router.dismissNewTripDrawer()
